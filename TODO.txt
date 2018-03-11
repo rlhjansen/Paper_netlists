@@ -1,0 +1,22 @@
+
+
+
+VLSI optimization
+synthesis and optimization of digital circuits
+
+a survey of optimization
+6 & 7 juni.
+
+
+grids maken 80 100 120
+netlists maken
+
+visualiseren
+
+
+
+https://meta2018.sciencesconf.org/
+http://www.airoconference.it/ods2018/topics
+
+Datastructuren code style:
+linter style modus aggressive (eerst kopie)
