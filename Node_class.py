@@ -18,6 +18,7 @@ class Node:
             self.gate = True
         elif value[0] == 'n':
             self.net = True
+        return True
 
 
     def get_value(self):
@@ -27,7 +28,7 @@ class Node:
         return self.neighbours
 
     def get_coord(self):
-        return self.coord()
+        return self.coord
 
     def is_occupied(self):
         return self.gate or self.net

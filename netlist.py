@@ -1,15 +1,18 @@
 import numpy as np
 import functools
 import operator
-from random import randint
+from random import randint, shuffle
 from Node_class import Node
 import os
 import queue as Q
 
 
+
 # TODO write function so grid is generated from csv file
 # TODO write function to make netlist on a given grid
 # TODO generate nets function, add_net has already been written, still has a TODO aspect
+
+
 def create_fpath(subdir, outf):
     rel_path = os.path.join(subdir, outf)
     script_dir = os.path.dirname(__file__)
@@ -26,7 +29,8 @@ def prodsum(iterable):
 
 # calculate the manhattan distance between two points
 def manhattan(loc1, loc2):
-    return sum([abs(loc1[i] - loc2[i]) for i in range(len(loc1))])
+    manh_d = sum([abs(loc1[i] - loc2[i]) for i in range(len(loc1))])
+    return manh_d
 
 
 
@@ -84,8 +88,14 @@ def transform_print(val, Advanced_heuristics):
             raise NotImplementedError
 
 
-def dec_string(val):
-    pass
+
+def get_name_netfile(gridnum, listnum):
+    return "C" + str(gridnum) + "_netlist_" + str(listnum) + ".csv"
+
+def get_name_circuitfile(gridnum, x, y, tot_gates):
+    return "Gateplatform_" + str(gridnum) + "_" + str(x) + "x" + str(
+        y) + "g" + str(tot_gates) + ".csv"
+
 
 
 class Grid:
@@ -162,7 +172,11 @@ class Grid:
                     gates.append(gate)
         return gate_coords, gates
 
-    def to_dicts(fpath, nets):
+    def file_to_Grid(fpath, nets):
+        """
+        :param nets: either a netlist or a number of nets
+        :return: a new Grid
+        """
         base = Grid.read_grid(fpath)
         xlen = len(base[0])
         ylen = len(base)
@@ -199,7 +213,6 @@ class Grid:
         check1 = len(lencheck) > 3
         check2 = self.griddict[gate_pos].get_value() != "0"
         while check1 or check2:
-            # print("in rand_loc")
             x_pos = randint(1, self.params[0]-2)
             y_pos = randint(1, self.params[1]-2)
             gate_pos = tuple([x_pos, y_pos, z_pos])
@@ -218,7 +231,6 @@ class Grid:
         """
         for i in range(num):
             rescoords = self.rand_loc()
-            # print("next gate")
             self.add_gate(rescoords, "g"+str(i))
 
 
@@ -233,10 +245,17 @@ class Grid:
         self.coord_gate[coords] = gate_string
         self.gate_net[gate_string] = set()
 
+
+    def place_premade_gates(self, gate_pairs):
+        gatecoords, gates = gate_pairs
+        for n, val in enumerate(gatecoords):
+            self.add_gate(val[::-1] + (0,), gates[n])
+
+
     # add goal-connection to the grid
     # this connection is an unrealised version of it, only the begin- & endpoint
     def add_net(self, gate1, gate2, n_str):
-        self.net_gate[n_str] = (self.gate_coords[gate1], self.gate_coords[gate2])
+        self.net_gate[n_str] = (gate1, gate2)
         self.griddict[self.gate_coords[gate1]].add_net(n_str)
         self.griddict[self.gate_coords[gate2]].add_net(n_str)
         self.gate_net[gate1].add(n_str)
@@ -244,11 +263,6 @@ class Grid:
         self.nets[n_str] = (gate1, gate2)
         print("added", n_str, gate1, gate2)
 
-
-    def place_premade_gates(self, gate_pairs):
-        gatecoords, gates = gate_pairs
-        for n, val in enumerate(gatecoords):
-            self.add_gate(val[::-1] + (0,), gates[n])
 
 
 
@@ -273,6 +287,12 @@ class Grid:
                 roomleft2 = self.griddict.get(self.gate_coords.get(g2)).has_room()
                 no_room_left = not (roomleft1 and roomleft2)
             self.add_net(g1, g2, net)
+
+
+    def get_random_net_order(self):
+        key_list = list(self.net_gate.keys())
+        shuffle(key_list)
+        return key_list
 
 
     def write_nets(self, subdir, gridnum, listnum):
@@ -356,11 +376,14 @@ class Grid:
         steps = 0
         start_loc = self.gate_coords.get(self.net_gate.get(net)[0])
         end_loc = self.gate_coords.get(self.net_gate.get(net)[1])
-        path = (start_loc)
+        path = ((start_loc),)
         manh_d = manhattan(path[-1], end_loc)
-        q.put(manh_d + steps, steps, path)
+        q.put((manh_d + steps, steps, path),)
         visited = set()
-        while q:
+        print("net =", net + "*", start_loc, end_loc)
+        count = 0
+        while not q.empty():
+            count += 1
             _, steps, path = q.get()
             for n in self.griddict.get(path[-1]).get_neighbours():
                 if n.is_occupied():
@@ -370,19 +393,34 @@ class Grid:
                 new_coord = n.get_coord()
                 manh_d = manhattan(new_coord, end_loc)
                 if manh_d == 0:
-                    return path + n, steps + 1
-                q.put(manh_d + steps, steps + 1, path+new_coord)
+                    print("A_star end, found path:", path, "\nFound in", steps, "steps")
+                    return path + (n.get_coord(),), steps + 1
+                if new_coord in visited:
+                    continue
+                else:
+                    q.put((manh_d + steps, steps + 1, path + (new_coord,)),)
+                    visited.add(new_coord)
+        print("A_star end, nothing found")
         return False, False  # No Path found
 
-    def solve_order(self, net_order):
+    def simple_solve_order(self, net_order):
+        tot_length = 0
+        solved = 0
+        all = len(net_order)
         for net in net_order:
+            print("solved", solved, "out of", all)
             path, length = self.A_star(net)
             if path:
+                solved += 1
                 Err = self.place(net, path, length)
                 if Err:
+                    print("encountered error in placement")
                     return False
-            else:
-                return False
+                solved += 1
+                tot_length += length
+        print("tot length of netlist", tot_length)
+        print("order", net_order, "works")
+        return tot_length, solved
 
 
     def place(self, net, path, length):
@@ -394,34 +432,3 @@ class Grid:
                 return True
         return False
 
-
-
-def get_name_netfile(gridnum, listnum):
-    return "C" + str(gridnum) + "_netlist_" + str(listnum) + ".csv"
-
-def get_name_circuitfile(gridnum, x, y, tot_gates):
-    return "Gateplatform_" + str(gridnum) + "_" + str(x) + "x" + str(
-        y) + "g" + str(tot_gates) + ".csv"
-
-
-
-# Paper, making = True
-
-
-
-"""
-if __name__ == "__main__":
-    x = 10
-    y = 20
-    tot_gates = 30
-    tot_nets = 50
-    fname = "Gateplatform_" + str(x) + "x" + str(y) + "g" + str(
-        tot_gates) + "v" + str(0) + ".csv"
-    subdir = "circuit_map"
-    fpath = create_fpath(subdir, fname)
-    newgrid = Grid([x, y], tot_gates, tot_nets)
-    print(newgrid.to_base())
-    newgrid.write_grid(fpath)
-    checkgrid = Grid.to_dicts(fpath, tot_nets)
-    print(checkgrid.to_base())
-"""
