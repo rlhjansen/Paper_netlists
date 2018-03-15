@@ -38,7 +38,7 @@ def swap_two_inplace(net_path):
 
 def swap_up_to_x_elems(net_path, x):
     new_paths = []
-    print("", net_path)
+    # print("", net_path)
     curnew = net_path[:]
     for i in range(x):
         new_paths.append(swap_two_elems(curnew))
@@ -87,7 +87,37 @@ def get_name_circuitfile(gridnum, x, y, tot_gates):
         y) + "g" + str(tot_gates) + ".csv"
 
 
+def gates_from_lol(lol):
+    """
+    :param lol: list of lists with input for each position on the ground
+    floor of the grid. ex: [['g0', '0', 'g1],['0','g2','g3']]
+    :return: tuple of all gate coordinates for a circuit and the gate numbers
+    """
+    gate_coords = []
+    gates = []
+    for x in range(len(lol)):
+        for y in range(len(lol[0])):
+            gate = lol[x][y]
+            if gate[0] == 'g':
+                gate_coords.append((x, y))
+                gates.append(gate)
+    return gate_coords, gates
 
+
+
+def read_grid(fpath):
+    """
+    reads a grid configuration fom the file at the file path
+    :return: list of lists
+    """
+    base = []
+    with open(fpath, 'r') as fin:
+        for line in fin:
+            base.append(line[:-1].split(','))  # [:-1] so no '\n')
+    otherbase = []
+    for i in range(len(base)):
+        otherbase.append(base[:][i])
+    return base
 
 
 
@@ -106,6 +136,7 @@ def manhattan(loc1, loc2):
     :param loc2: tuple, coordinate
     :return: manhattan distance between the two coordinates
     """
+    # print(loc1, loc2)
     manh_d = sum([abs(loc1[i] - loc2[i]) for i in range(len(loc1))])
     return manh_d
 

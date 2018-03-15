@@ -94,7 +94,11 @@ class Node:
         self.neighbours = neighbours
         self.neighbour_num = len(neighbours)
 
-
+    def satisfies_height_ele(self, h):
+        if self.coord[2] <= h:
+            return True
+        else:
+            return False
     ##########################
     #     Removing stuff     #
     ##########################
@@ -123,12 +127,11 @@ class Node:
 
 
     def check_necessity(self):
-        necesary = False
         for n in self.neighbours:
             if n.is_gate():
                 if n.needs_space() >= n.has_space():
-                    necesary = True
-        return necesary
+                    return True
+        return False
 
     def needs_space(self):
         return self.base_outgoing_nets - self.cur_outgoing
