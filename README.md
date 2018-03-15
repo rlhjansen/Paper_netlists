@@ -14,9 +14,10 @@
  - VLSI optimization
 
 
- ## Papers ##
+ ## Papers/naslagwerk ##
  - synthesis and optimization of digital circuits
  - a survey of optimization
+ - http://www.cleveralgorithms.com/nature-inspired/index.html
 
 
  ## conferenties/gaafheid

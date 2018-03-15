@@ -1,6 +1,5 @@
-from netlist import Grid
-from netlist import get_name_circuitfile
-from netlist import create_fpath
+from Gridfile import Grid
+from independent_functions import get_name_circuitfile, create_fpath
 
 
 xys = [[50,50], [20,30], [30, 40], [32, 32]]
