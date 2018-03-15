@@ -149,6 +149,9 @@ def neighbours(coords):
         rl.extend((tuple(temp1), tuple(temp2)))
     return tuple(rl)
 
+
+
+###### funcs for printing ############
 def transform_print(val, Advanced_heuristics):
     if Advanced_heuristics:
         if val == '0':
@@ -168,3 +171,18 @@ def transform_print(val, Advanced_heuristics):
             return 'GA'
         else:
             raise NotImplementedError
+
+
+def print_start_iter(algorithm, swaps, iteration):
+    print("############################")
+    print(algorithm, swaps, "swaps")
+    print("Starting iteration", iteration)
+    print("############################")
+
+
+def print_final_state(grid, best_order, best_len, \
+                      nets_solved, tot_nets):
+    print(grid)
+    print("Final Path =\t", best_order, )
+    print("Final Length =\t", best_len)
+    print("All connected =\t", nets_solved, "/", tot_nets)
