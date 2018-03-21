@@ -2,10 +2,13 @@ from Gridfile import Grid
 from independent_functions import get_name_circuitfile, create_fpath
 
 
-xys = [[50,50], [20,30], [30, 40], [32, 32]]
-tot_gate_list = [400, 30, 35, 40]
-tot_net_list = [[20, 30, 40, 30, 41], [30, 40, 50, 60, 65], [40,50,60,70,80], [50,60,70,80,85]]
-subdir = "circuit_map"
+nets_per_grid = 10
+gridfiles = 20
+xys = [[30,30] for _ in range(gridfiles)]
+tot_gate_list = [100]*gridfiles
+tot_net_list = [[80 for _ in range(nets_per_grid)] for _ in range(gridfiles)]
+subdir = "circuit_map_2"
+
 
 # DAAL, making = False
 
@@ -21,7 +24,6 @@ if True:
         print(newgrid)
         newgrid.write_grid(fpath)
         newgrid.nets_to_null()
-        break
         for j in range(len(tot_net_list[0])):
             print("enter net loop", i, j, tot_net_list[i][j])
             tot_nets = tot_net_list[i][j]

@@ -1,3 +1,5 @@
+from independent_functions import manhattan
+
 
 class Node:
     def __init__(self, coord, value):
@@ -41,6 +43,11 @@ class Node:
         :return: list of neighbouring node objects
         """
         return self.neighbours
+
+    def get_neighbour_order_to(self, end_loc):
+        nnl = self.neighbours[:]
+        nnl.sort(key=lambda x: manhattan(x.get_coord(), end_loc))
+        return nnl
 
     def get_coord(self):
         """
@@ -91,7 +98,7 @@ class Node:
 
 
     def connect(self, neighbours):
-        self.neighbours = neighbours
+        self.neighbours = list(neighbours)
         self.neighbour_num = len(neighbours)
 
     def satisfies_height_ele(self, h):

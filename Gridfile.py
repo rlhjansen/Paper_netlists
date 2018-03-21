@@ -134,6 +134,7 @@ class Grid:
         self.griddict[coords].set_value(gate_string)
         self.griddict[coords].add_base_outgoing()
         self.gate_coords[gate_string] = coords
+        print('gate string', gate_string)
         self.coord_gate[coords] = gate_string
         self.gate_net[gate_string] = set()
 
@@ -350,70 +351,6 @@ class Grid:
                 return True
         return False
 
-    ###################
-    # for DAAL ########
-    ###################
-    def daal_a_star(self, net):
-        q = Q.PriorityQueue()
-        steps = 0
-        start_loc = self.gate_coords.get(self.net_gate.get(net)[0])
-        end_loc = self.gate_coords.get(self.net_gate.get(net)[1])
-
-        self.griddict[start_loc].incr_outgoing()
-        self.griddict[end_loc].incr_outgoing()
-
-        path = (start_loc,)
-        manh_d = manhattan(path[-1], end_loc)
-        q.put((manh_d + steps, steps, path),)
-        visited = set()
-        count = 0
-        while not q.empty():
-            count += 1
-            _, steps, path = q.get()
-            for n in self.griddict.get(path[-1]).get_neighbours():
-                if n.is_occupied() or n.check_necessity():
-                    if not n.get_coord() == end_loc:
-                        continue
-
-                new_coord = n.get_coord()
-                manh_d = manhattan(new_coord, end_loc)
-                if manh_d == 0:
-                    return path + (n.get_coord(),), steps + 1
-                if new_coord in visited:
-                    continue
-                else:
-                    q.put((manh_d + steps, steps + 1, path + (new_coord,)),)
-                    visited.add(new_coord)
-        return False, False  # No Path found
-
-    def solve_order_daal(self, net_order):
-        tot_length = 0
-        solved = 0
-        nets_solved = []
-        for net in net_order:
-            path, length = self.daal_a_star(net)
-            if path:
-                Err = self.place_daal(net, path)
-                if Err:
-                    print("encountered error in placement")
-                    return False
-                solved += 1
-                tot_length += length
-                nets_solved.append(net)
-        print(solved, tot_length, nets_solved)
-        return tot_length, solved
-
-    def place_daal(self, net, path):
-        for spot in path[1:-1]:
-            if self.griddict[spot].set_value(net):
-                self.griddict[spot].incr_outgoing()
-                self.wire_locs.add(spot)
-                continue
-            else:
-                print("WRONG SPOT M8 :^^^^)")
-                return True
-        return False
-
 ###### Setup functions #########
 def SXHC(gridfile, subdir, netfile, consecutive_swaps):
     gridfile = create_fpath(subdir, gridfile)
@@ -446,3 +383,11 @@ def file_to_grid(fpath, nets):
     gate_coords, gates = gates_from_lol(base)
     Newgrid = Grid([xlen, ylen], (gate_coords, gates), nets)
     return Newgrid
+
+def SRC(gridfile, subdir, netfile):
+    gridfile = create_fpath(subdir, gridfile)
+    G = file_to_grid(gridfile, None)
+    G.read_nets(subdir, netfile)
+    cur_order = G.get_random_net_order()
+    tot_nets = len(cur_order)
+    return G, cur_order, tot_nets

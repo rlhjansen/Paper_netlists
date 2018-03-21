@@ -1,10 +1,10 @@
 from random import random
 from math import exp, log
 
-from Gridfile import SXHC
+from Gridfile import SXHC, SRC
 from independent_functions import swap_up_to_x_elems, \
     get_name_circuitfile, get_name_netfile, quicksort, print_start_iter, \
-    print_final_state
+    print_final_state, create_data_directory, write_connections_length
 
 class HC:
     def __init__(self, grid_file, subdir, net_file, consec_swaps, iterations, chance_on_same=.5):
@@ -199,20 +199,65 @@ class SA:
             self.anneal_conn = self.logarithmic_anneal_conn
             self.anneal_len = self.logarithmic_anneal_len
 
+class RC:
+    """
+    RC or Random Collector Takes in a Grid & Netlist.
+    Its goal is to apply the netlist, in random order, to the grid.
+    while it does this it collects data on the number of connections, as well
+    as their total length
+    """
+    def __init__(self, main_subdir, grid_num, list_num,  x, y, tot_gates,
+                 batch_size, batches, additions):
+        net_file = get_name_netfile(grid_num, list_num)
+        grid_file = get_name_circuitfile(grid_num, x, y, tot_gates)
+        G, cur_orders, all_nets = SRC(grid_file, main_subdir, net_file)
+        self.savefile = create_data_directory(main_subdir, grid_num, x, y,
+                                              tot_gates, list_num, additions)
+        self.G = G
+        self.tot_nets = all_nets
+        self.batches = batches
+        self.batches_size = batch_size
 
 
-SUBDIR = "DAAL_circuits"
-GRIDFILE = get_name_circuitfile(0, 18, 13, 25)
-NETFILE = get_name_netfile(0, 0)
-ITER = 2000
-CONSEQ_SWAP = 5
+    def run_algorithm(self):
+        for i in range(self.batches):
+            res = [self.get_results(self.G.get_random_net_order()) for _ in
+                   range(self.batches_size)]
+            write_connections_length(self.savefile, res)
 
 
-#ANNEAL_FUNC = ["log", 10, 1]
-ANNEAL_FUNC = ["linear", 100]
+    def get_results(self, order):
+        self.G.reset_nets()
+        return self.G.solve_order(order)
 
-hc = HC(GRIDFILE, SUBDIR, NETFILE, CONSEQ_SWAP, ITER)
-hc.run_algorithm()
 
-#sa = SA(GRIDFILE, SUBDIR, NETFILE, CONSEQ_SWAP, ITER, ANNEAL_FUNC)
-#sa.run_algorithm()
+
+if False:
+    GRIDFILE = get_name_circuitfile(0, 10, 20, 20)
+    NETFILE = get_name_netfile(0, 0)
+    ITER = 2000
+    CONSEQ_SWAP = 5
+
+    ANNEAL_FUNC = ["log", 10, 1]
+    ANNEAL_FUNC = ["linear", 100]
+
+    hc = HC(GRIDFILE, SUBDIR, NETFILE, CONSEQ_SWAP, ITER)
+    hc.run_algorithm()
+
+    # sa = SA(GRIDFILE, SUBDIR, NETFILE, CONSEQ_SWAP, ITER, ANNEAL_FUNC)
+    # sa.run_algorithm()
+
+SUBDIR = "circuit_map_2"
+GRIDNUM = 0
+X = 30
+Y = 30
+G = 100
+BATCH_SIZE = 10
+BATCHES = 2
+ADDITIONS = ['vannilla', 'A-star']
+while True:
+    for i in range(10):
+        NETLISTNUM = i
+        rc = RC(SUBDIR, GRIDNUM, NETLISTNUM,  X, Y, G, BATCH_SIZE, BATCHES, ADDITIONS)
+        rc.run_algorithm()
+    GRIDNUM += 1

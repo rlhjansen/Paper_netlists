@@ -1,8 +1,11 @@
 import os
 import functools
 import operator
+import Gridfile as Grid
+from shutil import copy
 
 from random import randint
+from math import sqrt
 
 
 def create_fpath(subdir, outf):
@@ -73,9 +76,36 @@ def quicksort(arr):
                     pivotList.append(i)
         less = quicksort(less)
         more = quicksort(more)
+    return less + pivotList + more
+
+def quicksort_DAAL(arr):
+    """
+            based on implementation from https://brilliant.org/wiki/quick-sort/
+            :param arr:
+            :return:
+            """
+    less = []
+    pivotList = []
+    more = []
+    if len(arr) <= 1:
+        return arr
+    else:
+        pivot = arr[0]
+        for i in arr:
+            if i[0] < pivot[0]:
+                less.append(i)
+            elif i[0] > pivot[0]:
+                more.append(i)
+            else:
+                if i[1] < pivot[1]:
+                    less.append(i)
+                elif i[1] > pivot[1]:
+                    more.append(i)
+                else:
+                    pivotList.append(i)
+        less = quicksort_DAAL(less)
+        more = quicksort_DAAL(more)
         return less + pivotList + more
-
-
 
 
 ###### Filename Generating ############
@@ -85,6 +115,32 @@ def get_name_netfile(gridnum, listnum):
 def get_name_circuitfile(gridnum, x, y, tot_gates):
     return "Gateplatform_" + str(gridnum) + "_" + str(x) + "x" + str(
         y) + "g" + str(tot_gates) + ".csv"
+
+def create_data_directory(main_subdir, gridnum, x, y, tot_gates, listnum, additions):
+    gridfn = get_name_circuitfile(gridnum, x, y, tot_gates)
+    netfn = get_name_netfile(gridnum, listnum)
+    new_subdir = '_'.join(additions) + '_' + gridfn[:-4] + "_" + netfn
+    rel_path = os.path.join(main_subdir, new_subdir)
+    script_dir = os.path.dirname(__file__)
+    dir_check_path = os.path.join(script_dir, rel_path)
+    if not os.path.exists(dir_check_path):
+        os.mkdir(dir_check_path)
+        copy(create_fpath(main_subdir,gridfn), os.path.join(dir_check_path, gridfn))
+        copy(create_fpath(main_subdir,netfn), os.path.join(dir_check_path, netfn))
+    else:
+        ans = input("Continuing will overwrite pre-rcorded data\nContinue? (Y/n)")
+        while True:
+            if ans == 'Y':
+                break
+            elif ans == 'n':
+                print('program terminated')
+                exit(0)
+            else:
+                print('invalid answer, did you perhaps not enter the capital "Y"?')
+                ans = input("Continuing will append pre-rcorded data\nContinue? (Y/n)")
+    return os.path.join(dir_check_path, 'data ' + '_'.join(additions) + '.csv')
+
+
 
 
 def gates_from_lol(lol):
@@ -136,9 +192,18 @@ def manhattan(loc1, loc2):
     :param loc2: tuple, coordinate
     :return: manhattan distance between the two coordinates
     """
-    # print(loc1, loc2)
     manh_d = sum([abs(loc1[i] - loc2[i]) for i in range(len(loc1))])
     return manh_d
+
+def euclidian(loc1, loc2):
+    """
+    :param loc1: tuple, coordinate
+    :param loc2: tuple, coordinate
+    :return: euclidian distance between the two coordinates
+    """
+    eucl_d = sqrt(sum([abs(loc1[i] - loc2[i])**2 for i in range(len(loc1))]))
+    return eucl_d
+
 
 
 
@@ -175,9 +240,10 @@ def neighbours(coords):
     for i in range(len(coords)):
         temp1 = list(coords)
         temp2 = list(coords)
-        temp1[i] += 1
-        temp2[i] -= 1
+        temp1[i] -= 1
+        temp2[i] += 1
         rl.extend((tuple(temp1), tuple(temp2)))
+        rl[-2], rl[0] = rl[0], rl[-2]
     return tuple(rl)
 
 
@@ -204,8 +270,9 @@ def transform_print(val, Advanced_heuristics):
             raise NotImplementedError
 
 
-def print_start_iter(algorithm, swaps, iteration):
+def print_start_iter(gridnum, netnum, algorithm, swaps, iteration):
     print("############################")
+    print("Grid", gridnum, "net", netnum)
     print(algorithm, swaps, "swaps")
     print("Starting iteration", iteration)
     print("############################")
@@ -217,3 +284,10 @@ def print_final_state(grid, best_order, best_len, \
     print("Final Path =\t", best_order, )
     print("Final Length =\t", best_len)
     print("All connected =\t", nets_solved, "/", tot_nets)
+
+def write_connections_length(filename, con_len_list):
+    w_str = '\n'.join([','.join([str(m) for m in n]) for i, n in enumerate(con_len_list)])
+    with open(filename, 'a') as f:
+        f.write(w_str)
+        f.write('\n')
+
