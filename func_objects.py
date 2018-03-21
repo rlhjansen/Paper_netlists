@@ -232,21 +232,6 @@ class RC:
 
 
 
-if False:
-    GRIDFILE = get_name_circuitfile(0, 10, 20, 20)
-    NETFILE = get_name_netfile(0, 0)
-    ITER = 2000
-    CONSEQ_SWAP = 5
-
-    ANNEAL_FUNC = ["log", 10, 1]
-    ANNEAL_FUNC = ["linear", 100]
-
-    hc = HC(GRIDFILE, SUBDIR, NETFILE, CONSEQ_SWAP, ITER)
-    hc.run_algorithm()
-
-    # sa = SA(GRIDFILE, SUBDIR, NETFILE, CONSEQ_SWAP, ITER, ANNEAL_FUNC)
-    # sa.run_algorithm()
-
 SUBDIR = "circuit_map_2"
 GRIDNUM = 0
 X = 30
