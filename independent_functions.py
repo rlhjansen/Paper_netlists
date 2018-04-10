@@ -1,7 +1,6 @@
 import os
 import functools
 import operator
-import Gridfile as Grid
 from shutil import copy
 
 from random import randint
@@ -9,6 +8,8 @@ from math import sqrt
 
 
 def create_fpath(subdir, outf):
+    print(outf)
+    print(subdir)
     rel_path = os.path.join(subdir, outf)
     script_dir = os.path.dirname(__file__)
     dir_check_path = os.path.join(script_dir, subdir)
@@ -128,7 +129,7 @@ def create_data_directory(main_subdir, gridnum, x, y, tot_gates, listnum, additi
         copy(create_fpath(main_subdir,gridfn), os.path.join(dir_check_path, gridfn))
         copy(create_fpath(main_subdir,netfn), os.path.join(dir_check_path, netfn))
     else:
-        ans = input("Continuing will overwrite pre-rcorded data\nContinue? (Y/n)")
+        ans = input("Continuing will overwrite pre-recorded data\nContinue? (Y/n)")
         while True:
             if ans == 'Y':
                 break
@@ -137,8 +138,8 @@ def create_data_directory(main_subdir, gridnum, x, y, tot_gates, listnum, additi
                 exit(0)
             else:
                 print('invalid answer, did you perhaps not enter the capital "Y"?')
-                ans = input("Continuing will append pre-rcorded data\nContinue? (Y/n)")
-    return os.path.join(dir_check_path, 'data ' + '_'.join(additions) + '.csv')
+                ans = input("Continuing will append pre-recorded data\nContinue? (Y/n)")
+    return os.path.join(dir_check_path, 'data ' + '_'.join(additions) + '.tsv')
 
 
 
@@ -285,8 +286,9 @@ def print_final_state(grid, best_order, best_len, \
     print("Final Length =\t", best_len)
     print("All connected =\t", nets_solved, "/", tot_nets)
 
-def write_connections_length(filename, con_len_list):
-    w_str = '\n'.join([','.join([str(m) for m in n]) for i, n in enumerate(con_len_list)])
+def write_connections_length_ord(filename, con_len_list):
+    print(con_len_list)
+    w_str = '\n'.join(['\t'.join([','.join([str(l) for l in m]) for m in n]) for n in con_len_list])
     with open(filename, 'a') as f:
         f.write(w_str)
         f.write('\n')

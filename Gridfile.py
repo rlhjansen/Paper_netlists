@@ -338,7 +338,7 @@ class Grid:
                 tot_length += length
                 nets_solved.append(net)
         print(solved, tot_length, nets_solved)
-        return tot_length, solved
+        return solved, tot_length
 
 
     def place(self, net, path, length):
@@ -350,6 +350,10 @@ class Grid:
                 print("WRONG SPOT M8 :^^^^)")
                 return True
         return False
+
+    def get_results(self, order):
+        self.reset_nets()
+        return self.solve_order(order), [i[1:] for i in order]
 
 ###### Setup functions #########
 def SXHC(gridfile, subdir, netfile, consecutive_swaps):

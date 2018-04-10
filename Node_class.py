@@ -57,17 +57,21 @@ class Node:
 
     def is_occupied(self):
         """
-        :return: True if node is in use by a net or gate
+        :return: True if node is in use by a net or gate, else False
         """
         return self.gate or self.net
 
     def is_gate(self):
         """
-        :return: True if node is a gate
+        :return: True if node is a gate, else False
         """
         return self.gate
 
     def get_adjecent_occupied(self):
+        """
+        :return: number of adjecent nodes that are occupied, either by a gate
+         or by a net
+        """
         count = 0
         for adj in self.neighbours:
             if adj.is_occupied():
@@ -75,7 +79,10 @@ class Node:
         return count
 
     def has_room(self):
-        #Todo add a check for outgoing netlists / gate_class
+        """
+        :return: True if node has room for an additional outgoing net,
+         False otherwise.
+        """
         count = self.get_adjecent_occupied() + len(self.out_nets)
         print([i.get_value() for i in self.get_neighbours()], self.out_nets, count)
         if count < self.neighbour_num:
@@ -98,18 +105,28 @@ class Node:
 
 
     def connect(self, neighbours):
+        """
+        :param neighbours: tuple (neighbouring) of Node objects
+        :saves: this the list in the node object
+        """
         self.neighbours = list(neighbours)
         self.neighbour_num = len(neighbours)
 
     def satisfies_height_ele(self, h):
+        """
+        :param h: height not to be surpassed
+        :return: True if the height part of the node coordinate is lower or
+         equal to h, else False
+        """
         if self.coord[2] <= h:
             return True
         else:
             return False
-    ##########################
-    #     Removing stuff     #
-    ##########################
+
     def remove_out_nets(self):
+        """
+        sets the outgoing nets (of a gate-node) to the empty set
+        """
         self.out_nets = set()
 
     def set_null(self):
@@ -125,7 +142,10 @@ class Node:
             self.net = False
 
 
-    ##################### DAAL ################
+    """ Functions below are not used for the course, but are for a personal
+
+    project.
+    """
     def reset_cur_outgoing(self):
         self.cur_outgoing = 0
 

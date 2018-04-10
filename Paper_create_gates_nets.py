@@ -6,8 +6,8 @@ nets_per_grid = 10
 gridfiles = 20
 xys = [[30,30] for _ in range(gridfiles)]
 tot_gate_list = [100]*gridfiles
-tot_net_list = [[80 for _ in range(nets_per_grid)] for _ in range(gridfiles)]
-subdir = "circuit_map_2"
+tot_net_list = [[120 for _ in range(nets_per_grid)] for _ in range(gridfiles)]
+subdir = "circuit_map_120"
 
 
 # DAAL, making = False
