@@ -8,7 +8,7 @@
 2) meer comments
 3) grids maken: 80 100 120
 4) proporties netlists vergelijkbaar met verhoudingen [hier](http://heuristieken.nl/wiki/index.php?title=Chips_%26_Circuits)
-5) Bi-directional A-star implementeren om nets die naar verstopte gates moeten sneller te prunen.
+5) scoring functie zoeken
 
 
  ## zoektermen ##

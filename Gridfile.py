@@ -311,7 +311,7 @@ class Grid:
                 manh_d = manhattan(new_coord, end_loc)
                 if manh_d == 0:
                     # print("A_star end, found path:", path, "\nFound in", steps, "steps")
-                    return path + (n.get_coord(),), steps + 1
+                    return path + (new_coord,), steps + 1
                 if new_coord in visited:
                     continue
                 else:
@@ -340,6 +340,20 @@ class Grid:
         print(solved, tot_length, nets_solved)
         return solved, tot_length
 
+    def get_solution_placement(self, net_order):
+        paths = []
+        for net in net_order:
+            path, length = self.A_star(net)
+            if path:
+                paths.append(path)
+                Err = self.place(net, path, length)
+            else:
+                paths.append( ((),))
+                print(paths)
+        self.reset_nets()
+        return paths
+
+
 
     def place(self, net, path, length):
         for spot in path[1:-1]:
@@ -367,13 +381,30 @@ def SXHC(gridfile, subdir, netfile, consecutive_swaps):
 
 
 
-def SPPAD(gridfile, subdir, netfile, batchsize):
+def SPPA(gridfile, subdir, netfile, batchsize):
+    """
+    :param gridfile: filename of circuit
+    :param subdir: subdirectory in which files are located
+    :param netfile: filename of circuit
+    :param batchsize: initial population size
+    :param height: maximum allowed height for solution finding
+    :return: starting parameters for the solver
+    """
     gridfile = create_fpath(subdir, gridfile)
     G = file_to_grid(gridfile, None)
     G.read_nets(subdir, netfile)
     first_batch = [G.get_random_net_order() for _ in range(batchsize)]
     tot_nets = len(first_batch[0])
     return G, first_batch, tot_nets
+
+
+def SRC(gridfile, subdir, netfile):
+    gridfile = create_fpath(subdir, gridfile)
+    G = file_to_grid(gridfile, None)
+    G.read_nets(subdir, netfile)
+    cur_order = G.get_random_net_order()
+    tot_nets = len(cur_order)
+    return G, cur_order, tot_nets
 
 
 def file_to_grid(fpath, nets):
@@ -387,11 +418,3 @@ def file_to_grid(fpath, nets):
     gate_coords, gates = gates_from_lol(base)
     Newgrid = Grid([xlen, ylen], (gate_coords, gates), nets)
     return Newgrid
-
-def SRC(gridfile, subdir, netfile):
-    gridfile = create_fpath(subdir, gridfile)
-    G = file_to_grid(gridfile, None)
-    G.read_nets(subdir, netfile)
-    cur_order = G.get_random_net_order()
-    tot_nets = len(cur_order)
-    return G, cur_order, tot_nets
