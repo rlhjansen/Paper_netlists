@@ -37,7 +37,6 @@ class Node:
         """
         return self.value
 
-
     def get_neighbours(self):
         """
         :return: list of neighbouring node objects
@@ -67,6 +66,10 @@ class Node:
         """
         return self.gate
 
+    def is_net(self):
+        return self.net
+
+
     def get_adjecent_occupied(self):
         """
         :return: number of adjecent nodes that are occupied, either by a gate
@@ -86,10 +89,10 @@ class Node:
         count = self.get_adjecent_occupied() + len(self.out_nets)
         print([i.get_value() for i in self.get_neighbours()], self.out_nets, count)
         if count < self.neighbour_num:
-            print("has room")
+            #print("has room")
             return True
         else:
-            print("has NO room")
+            #print("has NO room")
             return False
 
     def add_net(self, net):
@@ -169,6 +172,12 @@ class Node:
             if not n.is_occupied():
                 count += 1
         return count
+
+    def is_blocked_in(self):
+        for neighbour in self.neighbours:
+            if not (neighbour.is_gate() or neighbour.is_net()):
+                return False
+        return True
 
 
 

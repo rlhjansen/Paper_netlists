@@ -225,7 +225,7 @@ def create_data_directory(main_subdir, gridnum, x, y, tot_gates, listnum, additi
         copy(create_fpath(main_subdir,gridfn), os.path.join(dir_check_path, gridfn))
         copy(create_fpath(main_subdir,netfn), os.path.join(dir_check_path, netfn))
     else:
-        ans = input("Continuing will overwrite pre-recorded data\nContinue? (Y/n)")
+        ans = input("Continuing will append pre-recorded data\nContinue? (Y/n)")
         while True:
             if ans == 'Y':
                 break
@@ -389,3 +389,10 @@ def write_connections_length_ord(filename, con_len_list):
         f.write(w_str)
         f.write('\n')
 
+
+def write_connections_length(filename, con_len_list):
+    print(con_len_list)
+    w_str = '\n'.join(['\t'.join([','.join([str(l) for l in m]) for m in n[:-1]]) for n in con_len_list])
+    with open(filename, 'a') as f:
+        f.write(w_str)
+        f.write('\n')

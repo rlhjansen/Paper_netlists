@@ -4,12 +4,17 @@ from math import exp, log, tanh, ceil
 from Gridfile import SXHC, SPPA, SRC
 from independent_functions import swap_up_to_x_elems, swap_two_elems, \
     get_name_circuitfile, get_name_netfile, quicksort, print_start_iter, \
-    print_final_state, create_data_directory, write_connections_length_ord
+    print_final_state, create_data_directory, write_connections_length_ord, write_connections_length
+
+
+
+#Todo call save_prompt only once
+
 
 class HC:
     def __init__(self, subdir, grid_num, net_num, x, y, tot_gates,
                  consec_swaps, iterations, additions, chance_on_same=.5):
-        """
+        """Initializes the HillClimber solver
 
         :param subdir: Subdirectory name where files are located
         :param grid_num: Assigned number of circuit
@@ -35,7 +40,7 @@ class HC:
         self.sol_ord = cur_ords[0]
         self.tot_nets = tot_nets
         self.swaps = consec_swaps
-        self.nets_solved = 0
+        self.sol_conn = 0
         self.all_connected = False
         self.chance = chance_on_same
         self.savefile = create_data_directory(subdir, grid_num, x, y,
@@ -43,20 +48,20 @@ class HC:
 
     def check_climb(self, cur_conn, cur_ord, cur_len):
         if not self.all_connected:
-            if cur_conn > self.nets_solved:
+            if cur_conn > self.sol_conn:
                 self.sol_ord = cur_ord
-                self.nets_solved = cur_conn
+                self.sol_conn = cur_conn
                 print("changed :: greater")
                 if cur_conn == self.tot_nets:
                     self.sol_len = cur_len
                     self.all_connected = True
                     print("all_connected")
-            elif cur_conn == self.nets_solved:
+            elif cur_conn == self.sol_conn:
                 print("enter chance conn")
                 if self.chance < random():
                     print("changed :: equal")
-                    sol_ord = cur_ord
-                    nets_solved = cur_conn
+                    self.sol_ord = cur_ord
+                    self.sol_conn = cur_conn
                 else:
                     print("unchanged")
         else:
@@ -67,8 +72,8 @@ class HC:
                     print("enter chance len")
                     if self.chance < random():
                         print("changed :: equal")
-                        sol_ord = cur_ord
-                        nets_solved = cur_conn
+                        self.sol_ord = cur_ord
+                        self.sol_conn = cur_conn
                     else:
                         print("unchanged")
 
@@ -89,17 +94,31 @@ class HC:
             cur_conn, cur_len, tcur_ord = qslist[0]
             cur_ord = list(tcur_ord)
             print("checking choice", cur_conn, cur_len)
-            print("current best =", self.nets_solved, self.sol_len)
+            print("current best =", self.sol_conn, self.sol_len)
 
             self.check_climb(cur_conn, cur_ord, cur_len)
         self.G.solve_order(self.sol_ord)
         print_final_state(self.G, self.sol_ord, self.sol_len, \
-                          self.nets_solved, self.tot_nets)
+                          self.sol_conn, self.tot_nets)
 
 
 class SA:
     def __init__(self, subdir, grid_num, net_num, x, y, tot_gates,
                  consec_swaps, iterations, function_params, additions):
+        """Initializes the Simulated Annealing solver
+
+        :param subdir: subdirectory of circuit & netfiles
+        :param grid_num: circuit number
+        :param net_num: net number
+        :param x: x parameter of circuit
+        :param y: y parameter of circuit
+        :param tot_gates: total gates of a circuit
+        :param consec_swaps: consecutive swaps per step
+        :param iterations: total number of climbing iterations
+        :param function_params: parameters to select how to anneal
+            see determine anneal
+        :param additions:
+        """
         net_file = get_name_netfile(grid_num, net_num)
         grid_file = get_name_circuitfile(grid_num, x, y, tot_gates)
         G, cur_orders, all_nets = SXHC(grid_file, subdir, net_file, consec_swaps)
@@ -109,15 +128,16 @@ class SA:
         self.G = G
         self.name = "SA"
         self.sol_len = 5000000
-        self.nets_solved = 0
+        self.sol_conn = 0
         self.sol_ord = cur_orders[0]
         self.tot_nets = all_nets
         self.func = function_params[0]
         self.swaps = consec_swaps
-        self.nets_solved = 0
+        self.sol_conn = 0
         self.determine_anneal(function_params)
         self.savefile = create_data_directory(subdir, grid_num, x, y,
                                               tot_gates, net_num, additions)
+        self.annealFunc = None
 
 
 
@@ -132,31 +152,34 @@ class SA:
                 cur_len, cur_conn = self.G.solve_order(cur_ord)
                 data_lco.append((cur_conn, cur_len, tuple(cur_ord)))
                 self.G.reset_nets()
-                write_connections_length_ord(self.savefile, [[(cur_conn, cur_len), [j+1], [i[1:] for i in cur_ord]]])
+                write_connections_length_ord(self.savefile, [[(cur_conn, cur_len), cur_ord]])
                 self.check_anneal(cur_conn, cur_ord, cur_len, i)
 
         self.G.solve_order(self.sol_ord)
         print_final_state(self.G, self.sol_ord, self.sol_len, \
-                          self.nets_solved, self.tot_nets)
+                          self.sol_conn, self.tot_nets)
 
+    ################################################################
+    # Anneal Checks                                                #
+    ################################################################
 
-    def check_anneal(self, cur_conn, cur_ord, cur_len, i):
+    def check_all_anneal(self, cur_conn, cur_ord, cur_len, i):
         if not self.all_connected:
             print(cur_conn)
-            if cur_conn > self.nets_solved:
+            if cur_conn > self.sol_conn:
                 self.sol_ord = cur_ord
-                self.nets_solved = cur_conn
+                self.sol_conn = cur_conn
                 print("change sol order :: greater")
                 if cur_conn == self.tot_nets:
                     self.sol_len = cur_len
                     self.all_connected = True
                     print("all_connected")
-            elif cur_conn <= self.nets_solved:
+            elif cur_conn <= self.sol_conn:
                 print("enter anneal conn")
                 if self.anneal_conn(cur_conn, i):
                     print("change sol order :: equal")
                     self.sol_ord = cur_ord
-                    self.nets_solved = cur_conn
+                    self.sol_conn = cur_conn
                 else:
                     print("unchanged anneal")
         else:
@@ -167,9 +190,39 @@ class SA:
                     print("enter anneal len")
                     self.sol_ord, self.sol_len = cur_ord, cur_len
                 else:
-                    print("enter anneal len")
+                    print("unchanged anneal len")
+
+
+
+    def check_len_anneal(self, cur_conn, cur_ord, cur_len, i):
+        if self.sol_len > cur_len:
+            self.sol_conn, self.sol_ord, self.sol_len = cur_conn, cur_ord, cur_len
+        elif self.anneal_len(cur_len, i):
+            print("enter anneal len")
+            self.sol_conn, self.sol_ord, self.sol_len = cur_conn, cur_ord, cur_len
+        else:
+            print("unchanged anneal len")
+
+
+    def check_conn_anneal(self, cur_conn, cur_ord, cur_len, i):
+        if cur_conn > self.sol_conn:
+            self.sol_conn, self.sol_ord, self.sol_len = cur_conn, cur_ord, cur_len
+        elif self.anneal_len(cur_len, i):
+            print("enter anneal conn")
+            self.sol_conn, self.sol_ord, self.sol_len = cur_conn, cur_ord, cur_len
+        else:
+            print("unchanged anneal conn")
+
+    ################################################################
+    # Anneal Checks - Comparisons and temperatures                 #
+    ################################################################
+
 
     def linear_anneal_len(self, cur_len, i):
+        """
+        :param i: iteration number i
+        :returns: whether or not to accept an outcome
+        """
         chance = exp((-(cur_len - self.sol_len))/(self.T-(i)*self.T_step))
         self.T -= self.T_step
         if random() < chance:
@@ -185,7 +238,7 @@ class SA:
         print('self.T', self.T)
         print('i', i)
         print('self.T_step', self.T_step)
-        chance = exp((-(cur_conn - self.nets_solved))/(self.T-(i)*self.T_step))
+        chance = exp((-(cur_conn - self.sol_conn))/(self.T-(i)*self.T_step))
         if random() < chance:
             return True
         else:
@@ -213,7 +266,7 @@ class SA:
         """
 
         self.T = self.T_start/log(1+i)
-        chance = exp(-(self.nets_solved - cur_conn)/self.T)
+        chance = exp(-(self.sol_conn - cur_conn)/self.T)
         if random() < chance:
             return True
         else:
@@ -285,30 +338,41 @@ class SA:
         """
         for geman see Nourani and Andresen 'A comparison of simulated annealing cooling schedules' p.3
 
-        :param function: anneal function type, linear, log, exp
-        :return:
+        :param function: per index:
+            0 'length', 'connections', 'all'
+            1 (anneal function type) 'linear', 'log', 'exp', 'geman'
+            2+ algorithms specific
         """
-        self.functype = function[0]
-        if self.functype == 'linear':
+        anneal_on = function[0]
+        if anneal_on == 'all':
+             self.annealFunc = self.check_all_anneal
+        elif anneal_on == 'length':
+            self.annealFunc = self.check_len_anneal
+        elif anneal_on == 'connections':
+            self.annealFunc = self.check_conn_anneal
+
+        functype = function[1]
+        if functype == 'linear':
             self.anneal_conn = self.linear_anneal_conn
             self.anneal_len = self.linear_anneal_len
-            self.T = function[1]
-            self.T_step = function[1]/(self.iterations+1)
-        elif self.functype == 'log':
-            self.T_start = function[1] #Temperature start
+            self.T = function[2]
+            self.T_step = function[2]/(self.iterations+1)
+            self.T = function[2]
+            self.T_step = function[2] / (self.iterations + 1)
+        elif functype == 'log':
+            self.T_start = function[2] #Temperature start
             self.anneal_conn = self.logarithmic_anneal_conn
             self.anneal_len = self.logarithmic_anneal_len
-        elif self.functype == 'exp':
-            self.st = function[1] #start temperature
-            self.et = function[2] #end temperature
+        elif functype == 'exp':
+            self.st = function[2] #start temperature
+            self.et = function[3] #end temperature
             self.anneal_conn = self.exp_anneal_conn
             self.anneal_len = self.exp_anneal_len
-        elif self.functype == 'geman':
+        elif functype == 'geman':
             self.anneal_len = self.geman_anneal_len
             self.anneal_conn = self.geman_anneal_conn
-            self.c = 200 #largest barrier, arbitrarily chosen
-            self.d = 1 #arbitrarily chosen
-
+            self.c = function[2] #largest barrier, arbitrarily chosen
+            self.d = function[3] #arbitrarily chosen
 
 
 
@@ -338,7 +402,7 @@ class RC:
         for i in range(self.batches):
             res = [self.G.get_results(self.G.get_random_net_order()) for _ in
                    range(self.batches_size)]
-            write_connections_length_ord(self.savefile, res)
+            write_connections_length(self.savefile, res)
 
 
 class PPA:
@@ -346,8 +410,10 @@ class PPA:
 
     for info check the original paper by Salhi and Frage
     """
+    # Todo implement a last_generation attribute, to save computation time
+    # Todo save (maximum) generation (or count)
     def __init__(self, subdir, grid_num, net_num, x, y, g, max_generations,
-                elitism=0, pop_cut=20, max_runners=4, sampling=False):
+                elitism=0, pop_cut=20, max_runners=4):
         """
 
         :param subdir: Subdirectory name where files are located
@@ -400,16 +466,17 @@ class PPA:
             runners.append(value)
             print("mrank", mrank)
             print("value", value, "\n")
-        input()
 
-        distances = [2*(1 - mrank)*(random()-0.5) for mrank in mapped_ranks]
+        distances = [2*(mrank)*(random()-0.5) for mrank in mapped_ranks]
 
-        print("distances", distances)
-        print("mapped ranks", mapped_ranks)
-        print("runners", runners)
+        if True:
+            print("distances", distances)
+            print("mapped ranks", mapped_ranks)
+            print("runners", runners)
+            print("len orders", len(orders))
+            print("len runners", len(runners))
+
         swaplist = []
-        print("len orders", len(orders))
-        print("len runners", len(runners))
         for i, rcount in enumerate(runners):
             rbase = 1.0
             cur_swaps = []
@@ -440,18 +507,19 @@ class PPA:
             for i in range(self.elitism):
                 new_pop.append(qslist[i][2])
         else:
-            for i in enumerate(qslist):
+            for i, _ in enumerate(qslist):
+                print(_)
                 new_pop.append(qslist[i][2])
 
         orderlist = [qslist[i][2] for i in range(len((qslist)))]
         qslen = len(qslist)
 
-        ranks = [(i+0.5)/qslen for i in range(qslen)]  # maps linearly to (0,0, 1.0)
+        ranks = [(i+0.5)/qslen for i in range(qslen)]  # maps linearly to linspace between (0.0, 1.0)
         created_pop = self.ranks_to_newpop(ranks, orderlist)
         new_pop.extend(created_pop)
 
         self.sol_ord = list(qslist[0][2])
-        self.nets_solved = qslist[0][0]
+        self.sol_conn = qslist[0][0]
         self.sol_len = qslist[0][1]
 
         self.pop = new_pop
@@ -466,10 +534,12 @@ class PPA:
             data_clo = []  # conn, len, order
             for i, cur_ord in enumerate(self.pop):
                 satisfies = self.G.solve_order(cur_ord)
-                c_solved, cur_len = satisfies
+                cur_conn, cur_len = satisfies
                 self.pop[i] = cur_ord
-                data_clo.append((c_solved, cur_len, tuple(cur_ord)))
+                data_clo.append((cur_conn, cur_len, tuple(cur_ord)))
                 self.G.reset_nets()
+                write_connections_length_ord(self.savefile, [
+                    [(cur_conn, cur_len), cur_ord]])
             qslist = quicksort(data_clo)
             self.sol_len = qslist[1]
             self.populate(qslist[:self.pop_cut])
@@ -536,20 +606,57 @@ FUNC_PARAMS = ['linear', 100]
 ADDITIONS = ['vannilla', 'A-star', 'Simulated-Annealing']  #for simulated annealing
 """
 
-SUBDIR = "DAAL_circuits"
-GRIDNUM = 1
-NETLISTNUM = 1
-X = 18
-Y = 13
-G = 25
+GRIDNUM = 0
+NETLISTNUM = 0
+X = 30
+Y = 30
+G = 100
+NETL_LEN = 100
 CONSEC_SWAPS = 2
-ITERATIONS = 20
+ITERATIONS = 1500
+GENERATIONS = 20
 ELITISM = 0
+SUBDIR = "circuit_map_" + str(NETL_LEN)
 
-if True:
-    ppa = PPA(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, ITERATIONS, elitism=ELITISM)
-    ord = ppa.G.get_random_net_order()
-    paths = ppa.G.get_solution_placement(ord)
-    print(paths)
+
+#Todo SA possible with different values to anneal con & len
+ANN_FUNC_PARAMS_LEN = ["length", "geman", 700, 10, None, None]
+ANN_FUNC_PARAMS_CONN = ["connections", "geman", None, None, 100, 1]
+ANN_FUNC_PARAMS_BOTH = ["all", "geman", 700, 10, 100, 1]
+
+RC_ADDITION = ["random collector", "A-star, " + str(NETL_LEN) + "_length NL"]
+HC_ADDITION = ["Hillclimber", "A-star,, " +str(NETL_LEN) + "_length NL"]
+SA_LEN_ADDITION = ["Simulated Annealing Len", "A-star, " +str(NETL_LEN) + "_length NL"]
+SA_CONN_ADDITION = ["Simulated Annealing Con", "A-star, " +str(NETL_LEN) + "_length NL"]
+SA_ALL_ADDITION = ["Simulated Annealing ConLen", "A-star, " +str(NETL_LEN) + "_length NL"]
+
+
+while True:
+    if False:
+        rc = RC(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, 30, NETL_LEN, RC_ADDITION)
+        rc.run_algorithm()
+    if False:
+        hc = HC(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, 30, NETL_LEN, HC_ADDITION)
+        hc.run_algorithm()
+    if False:  #SA length
+        sa = SA(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
+                ANN_FUNC_PARAMS_BOTH, SA_LEN_ADDITION)
+        sa.run_algorithm()
+    if False:  #SA connections
+        sa = SA(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
+                ANN_FUNC_PARAMS_BOTH, SA_CONN_ADDITION)
+        sa.run_algorithm()
+    if False:  #SA all
+        sa = SA(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
+                ANN_FUNC_PARAMS_BOTH, SA_ALL_ADDITION)
+        sa.run_algorithm()
+    if True:   # PPA standard
+        ppa = PPA(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, GENERATIONS,
+                elitism=0, pop_cut=20, max_runners=5)
+        ppa.run_algorithm()
+    NETLISTNUM += 1
+    if NETLISTNUM > 9:
+        break
+
 
 

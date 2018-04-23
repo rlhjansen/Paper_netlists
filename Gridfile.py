@@ -289,10 +289,17 @@ class Grid:
     ###########################
 
     def A_star(self, net):
+        """ finds a path for a net with A-star algorithm, quits searching early if the end-gate is closed off by its immediate neighbourse.
+
+        :param net:
+        :return: path, length if path founde, else false, false
+        """
         q = Q.PriorityQueue()
         steps = 0
-        start_loc = self.gate_coords.get(self.net_gate.get(net)[0])
         end_loc = self.gate_coords.get(self.net_gate.get(net)[1])
+        if self.griddict.get(end_loc).is_blocked_in():
+            return False, False
+        start_loc = self.gate_coords.get(self.net_gate.get(net)[0])
         path = ((start_loc),)
         manh_d = manhattan(path[-1], end_loc)
         q.put((manh_d + steps, steps, path),)
@@ -371,6 +378,14 @@ class Grid:
 
 ###### Setup functions #########
 def SXHC(gridfile, subdir, netfile, consecutive_swaps):
+    """
+
+    :param gridfile:
+    :param subdir:
+    :param netfile:
+    :param consecutive_swaps:
+    :return:
+    """
     gridfile = create_fpath(subdir, gridfile)
     G = file_to_grid(gridfile, None)
     G.read_nets(subdir, netfile)
@@ -399,6 +414,12 @@ def SPPA(gridfile, subdir, netfile, batchsize):
 
 
 def SRC(gridfile, subdir, netfile):
+    """
+    :param gridfile: filename of circuit
+    :param subdir: subdirectory in which files are located
+    :param netfile: filename of circuit
+    :return: starting parameters for the solver
+    """
     gridfile = create_fpath(subdir, gridfile)
     G = file_to_grid(gridfile, None)
     G.read_nets(subdir, netfile)
