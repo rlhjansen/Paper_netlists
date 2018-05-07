@@ -451,6 +451,11 @@ def write_connections_length_ord(filename, con_len_list):
         f.write(w_str)
         f.write('\n')
 
+def writebar(filename, *extra):
+    with open(filename, 'a') as f:
+        f.write('#### ' + ' '.join([*extra]) + '\n')
+
+
 
 def write_connections_length(filename, con_len_list):
     print(con_len_list)
@@ -458,3 +463,4 @@ def write_connections_length(filename, con_len_list):
     with open(filename, 'a') as f:
         f.write(w_str)
         f.write('\n')
+

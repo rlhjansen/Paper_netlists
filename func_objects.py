@@ -7,7 +7,7 @@ from Gridfile import SXHC, SPPA, SRC
 from independent_functions import swap_up_to_x_elems, \
     get_name_circuitfile, get_name_netfile, quicksort, print_start_iter, \
     print_final_state, create_data_directory, combine_score, split_score, \
-    write_connections_length_ord, write_connections_length
+    write_connections_length_ord, write_connections_length, writebar
 
 
 
@@ -46,6 +46,8 @@ class HC:
         self.sol_conn = 0
         self.all_connected = False
         self.chance = chance_on_same
+        additions += [str(consec_swaps) + "swaps",
+                      str(iterations) + "iterations"]
         self.savefile = create_data_directory(subdir, grid_num, x, y,
                                               tot_gates, net_num, additions)
 
@@ -60,13 +62,16 @@ class HC:
                     self.all_connected = True
                     print("all_connected")
             elif cur_conn == self.sol_conn:
-                print("enter chance conn")
-                if self.chance < random():
-                    print("changed :: equal")
-                    self.sol_ord = cur_ord
-                    self.sol_conn = cur_conn
-                else:
-                    print("unchanged")
+                if cur_len < self.sol_len:
+                    self.sol_ord, self.sol_len = cur_ord, cur_len
+                elif cur_len == self.sol_len:
+                    print("enter chance len")
+                    if self.chance < random():
+                        print("changed :: equal")
+                        self.sol_ord = cur_ord
+                        self.sol_conn = cur_conn
+                    else:
+                        print("unchanged")
         else:
             if cur_conn == self.tot_nets:
                 if cur_len < self.sol_len:
@@ -138,6 +143,9 @@ class SA:
         self.swaps = consec_swaps
         self.sol_conn = 0
         self.determine_anneal(function_params)
+        additions += [str(consec_swaps) + "swaps",
+                      str(iterations) + "iterations"] + function_params
+
         self.savefile = create_data_directory(subdir, grid_num, x, y,
                                               tot_gates, net_num, additions)
         self.annealFunc = None
@@ -389,12 +397,12 @@ class RC:
     as their total length
     """
     def __init__(self, main_subdir, grid_num, list_num,  x, y, tot_gates,
-                 batch_size, batches, additions):
+                 additions, batches, batch_size=100, ask=True):
         net_file = get_name_netfile(grid_num, list_num)
         grid_file = get_name_circuitfile(grid_num, x, y, tot_gates)
         G, cur_orders, all_nets = SRC(grid_file, main_subdir, net_file)
         self.savefile = create_data_directory(main_subdir, grid_num, x, y,
-                                              tot_gates, list_num, additions)
+                                              tot_gates, list_num, additions, ask=ask)
         self.G = G
         self.tot_nets = all_nets
         self.batches = batches
@@ -406,6 +414,7 @@ class RC:
             res = [self.G.get_results(self.G.get_random_net_order()) for _ in
                    range(self.batches_size)]
             write_connections_length(self.savefile, res)
+            writebar(self.savefile, "Batch " + str(i) + " out of " + str(self.batches))
 
 
 class PPA:
@@ -446,12 +455,14 @@ class PPA:
         self.G = G
         self.last_pop = tuple((),)
         self.last_scores = tuple((),)
-        FUNC_PARAMS = ["pop" + str(pop_cut), "max_runners" + str(max_runners), \
-                           "elitism" + str(elitism)]
+        FUNC_PARAMS = ["pop" + str(pop_cut),
+                       "max_runners" + str(max_runners),
+                       "elitism" + str(elitism),
+                       "generations" + str(max_generations)]
         self.savefile = create_data_directory(subdir, grid_num, x, y,
                                               g, net_num, FUNC_PARAMS, ask=ask)
 
-    def ranks_to_newpop(self, scores, orders):
+    def fitnesses_to_newpop(self, scores, orders):
         """ runners & distances from original paper by Salhi & Fraga
 
         original distance function:
@@ -548,13 +559,13 @@ class PPA:
         zMax = max(plant_scores)
         zMin = min(plant_scores)
         if zMax == zMin:
-            fitnesses = [(score - zMin) / (1 + zMax - zMin) for score in
+            fitnesses = [0 for score in
                          plant_scores]
         else:
             fitnesses = [(score-zMin)/(zMax-zMin) for score in plant_scores]
 
         print("fitnesses", fitnesses)
-        self.pop = self.ranks_to_newpop(fitnesses, plant_orders)
+        self.pop = self.fitnesses_to_newpop(fitnesses, plant_orders)
 
         best_con, best_len = split_score(plant_scores[0])
         print("best len", best_len)
@@ -575,11 +586,11 @@ class PPA:
             for i, cur_ord in enumerate(self.pop):
                 satisfies = self.G.solve_order(cur_ord)
                 cur_conn, cur_len = satisfies
-                self.pop[i] = cur_ord
                 data_clo.append((cur_conn, cur_len, tuple(cur_ord)))
                 self.G.reset_nets()
                 write_connections_length(self.savefile, [
                     [(cur_conn, cur_len), cur_ord]])
+            writebar(self.savefile, "generation", str(i))
             qslist = quicksort(data_clo)
             self.sol_len = qslist[1]
             self.populate(qslist[:self.pop_cut])
@@ -596,21 +607,32 @@ class PPA:
               self.sol_len)
 
 
+###############################################################################
+###  Config
+###############################################################################
+#General
+ASK = False
 
 GRIDNUM = 0
-NETLISTNUM = 0
+NETLISTNUMS = [1,3,4]
 X = 30
 Y = 30
 G = 100
 NETL_LEN = 100
+
+#RC
+BATCHES = 100
+
+#HC/SA
 CONSEC_SWAPS = 2
 ITERATIONS = 1500
+
+#PPA
 GENERATIONS = 30
 ELITISM = 20
 POP_CUT = 30
 MAX_RUNNERS = 5
-ASK = False
-SUBDIR = "circuit_map_" + str(NETL_LEN)
+SUBDIR = "circuit_map_git"
 
 
 #Todo SA possible with different values to anneal con & len
@@ -626,32 +648,29 @@ SA_ALL_ADDITION = ["Simulated Annealing ConLen", "A-star, " +str(NETL_LEN) + "_l
 
 
 if __name__ == '__main__':
-    while True:
-        if False:
-            rc = RC(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, 30, NETL_LEN, RC_ADDITION, ask=True)
+    for NETLIST_NUM in NETLISTNUMS:
+        if True:
+            rc = RC(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, BATCHES, RC_ADDITION, ask=False)
             rc.run_algorithm()
         if False:
-            hc = HC(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, 30, NETL_LEN, HC_ADDITION, ask=True)
+            hc = HC(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, 30, NETL_LEN, HC_ADDITION, ask=False)
             hc.run_algorithm()
         if False:  #SA length
-            sa = SA(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
+            sa = SA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
                     ANN_FUNC_PARAMS_BOTH, SA_LEN_ADDITION, ask=True)
             sa.run_algorithm()
         if False:  #SA connections
-            sa = SA(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
+            sa = SA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
                     ANN_FUNC_PARAMS_BOTH, SA_CONN_ADDITION, ask=True)
             sa.run_algorithm()
         if False:  #SA all
-            sa = SA(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
+            sa = SA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
                     ANN_FUNC_PARAMS_BOTH, SA_ALL_ADDITION, ask=True)
             sa.run_algorithm()
-        if True:   # PPA standard
-            ppa = PPA(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, GENERATIONS,
+        if False:   # PPA standard
+            ppa = PPA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, GENERATIONS,
                     elitism=ELITISM, pop_cut=POP_CUT, max_runners=MAX_RUNNERS, ask=False)
             ppa.run_algorithm()
-        NETLISTNUM += 1
-        if NETLISTNUM > 9:
-            break
 
 
 
