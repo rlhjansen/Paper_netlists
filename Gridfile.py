@@ -58,16 +58,13 @@ class Grid:
     def write_grid(self, fname):
         """
         writes current gate configuration to an out-file
-        :param fname:
-        :return:
+        :param fname: filename to save to
         """
         grid = self.to_base()
         with open(fname, 'w') as fout:
             for row in grid:
                 fout.write(",".join(row) + "\n")
         fout.close()
-
-
 
     def to_base(self):
         """
@@ -134,7 +131,6 @@ class Grid:
         self.griddict[coords].set_value(gate_string)
         self.griddict[coords].add_base_outgoing()
         self.gate_coords[gate_string] = coords
-        print('gate string', gate_string)
         self.coord_gate[coords] = gate_string
         self.gate_net[gate_string] = set()
 
@@ -144,6 +140,12 @@ class Grid:
         for n, val in enumerate(gatecoords):
             self.add_gate(val[::-1] + (0,), gates[n])
 
+    def get_gate_coords(self):
+        kv = [[k , v] for k, v in self.gate_coords.items()]
+        k = [kv[i][0] for i in range(len(kv))]
+        v = [kv[i][1] for i in range(len(kv))]
+        return k, v
+    ### Net functions ###
 
     # add goal-connection to the grid
     # this connection is an unrealised version of it, only the begin- & endpoint
@@ -154,7 +156,6 @@ class Grid:
         self.gate_net[gate1].add(n_str)
         self.gate_net[gate2].add(n_str)
         self.nets[n_str] = (gate1, gate2)
-        # print("added", n_str, gate1, gate2)
 
 
 
@@ -185,7 +186,7 @@ class Grid:
     def get_random_net_order(self):
         key_list = list(self.net_gate.keys())
         shuffle(key_list)
-        return key_list
+        return tuple(key_list)
 
     def get_net_ordered_manhattan(self):
         values = list(self.net_gate.values())
@@ -356,7 +357,7 @@ class Grid:
                 Err = self.place(net, path, length)
             else:
                 paths.append( ((),))
-                print(paths)
+            #print(paths)
         self.reset_nets()
         return paths
 

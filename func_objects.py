@@ -1,10 +1,13 @@
+import numpy as np
+
 from random import random
 from math import exp, log, tanh, ceil
 
 from Gridfile import SXHC, SPPA, SRC
-from independent_functions import swap_up_to_x_elems, swap_two_elems, \
+from independent_functions import swap_up_to_x_elems, \
     get_name_circuitfile, get_name_netfile, quicksort, print_start_iter, \
-    print_final_state, create_data_directory, write_connections_length_ord, write_connections_length
+    print_final_state, create_data_directory, combine_score, split_score, \
+    write_connections_length_ord, write_connections_length
 
 
 
@@ -413,7 +416,7 @@ class PPA:
     # Todo implement a last_generation attribute, to save computation time
     # Todo save (maximum) generation (or count)
     def __init__(self, subdir, grid_num, net_num, x, y, g, max_generations,
-                elitism=0, pop_cut=20, max_runners=4):
+                elitism=0, pop_cut=20, max_runners=4, ask=True):
         """
 
         :param subdir: Subdirectory name where files are located
@@ -441,19 +444,23 @@ class PPA:
         self.pop = initial_pop
         self.tot_nets = all_nets
         self.G = G
-        if elitism:
-            FUNC_PARAMS = ["pop" + str(pop_cut), "max_runners" + str(max_runners), \
-                           "elite" + str(elitism)]
-        else:
-            FUNC_PARAMS = ["pop" + str(pop_cut), "max_runners" + str(max_runners), \
-                           "all_elite"]
+        self.last_pop = tuple((),)
+        self.last_scores = tuple((),)
+        FUNC_PARAMS = ["pop" + str(pop_cut), "max_runners" + str(max_runners), \
+                           "elitism" + str(elitism)]
         self.savefile = create_data_directory(subdir, grid_num, x, y,
-                                              g, net_num, FUNC_PARAMS)
+                                              g, net_num, FUNC_PARAMS, ask=ask)
 
     def ranks_to_newpop(self, scores, orders):
         """ runners & distances from original paper by Salhi & Fraga
 
-        scoring function yet not yet justified
+        original distance function:
+            2*(1-mrank)*(random()-0.5)
+            --> maps greater ranks closer to 0 and randomizes +/-
+
+        applied distance function:
+            (1-mrank)*random()
+            -->  maps greater ranks closer to 0
 
         :param orders: best placement orders of last generaion
         :returns: new population plants to be considered
@@ -464,73 +471,106 @@ class PPA:
         for mrank in mapped_ranks:
             value = ceil(self.max_runners*mrank*random())
             runners.append(value)
-            print("mrank", mrank)
-            print("value", value, "\n")
 
-        distances = [2*(mrank)*(random()-0.5) for mrank in mapped_ranks]
 
         if True:
-            print("distances", distances)
             print("mapped ranks", mapped_ranks)
             print("runners", runners)
-            print("len orders", len(orders))
-            print("len runners", len(runners))
 
         swaplist = []
         for i, rcount in enumerate(runners):
-            rbase = 1.0
             cur_swaps = []
             for _ in range(rcount):
-                rbase += distances[i]*self.max_runners
-                print(rbase)
-                cur_swaps.append(ceil(rbase))
-                new_ords = swap_up_to_x_elems(orders[i], ceil(rbase))
+                distance = (1-mapped_ranks[i])*random()*self.max_runners
+                cur_swaps.append(ceil(distance))
+                new_ords = swap_up_to_x_elems(orders[i], ceil(distance))
                 newpop.append(new_ords[0])
-                rbase = rbase % 1
             swaplist.append(cur_swaps)
         print("swaplist", swaplist)
         return newpop
 
+    def combine_old_new(self, nscores, norderlist):
+        """ Combines new & old results, sorts them and returns them
 
+        :param nscores: scores from the latest
+        :param norderlist: orders from the latest generation
+        :return: newest values, combined & sorted with the best (see elitism)
+            of last generation.
+        """
+        print("last", self.last_scores)
+        print("new", nscores)
+        scores = self.last_scores + nscores
+        orders = self.last_pop + norderlist
+        zipped = zip(scores, orders)
+        new_ranking = sorted(zipped, key=lambda x: -x[0])
+        return [plant for plant in zip(*new_ranking)] #orders, scores (maximizing)
 
     def populate(self, qslist):
         """ Sets a new population for the following iteration.
 
         :param qslist: elements are tuple(nets solved, solution length,
                                           net order)
-        :variable ranks: fitness/ranking function should be the following type:
-            f(z) = (Zmax - z)/(Zmax-Zmin), with Zmax & min being objective
+        :variable ranks:
+        *   fitness/ranking function should be the following type:
+
+            original:
+            f(z) = (zMax - z)/(zMax-zMin), with Zmax & min being objective
             maximum & minimum functions
+            The the goal of the function is to minimize z
+
+            Implemented:
+            f(z) = (z - zMin)/(zMax-zMin)
+            the score z made of two parts:
+              - An integer part: the connections made
+              - A decimal part: (10000-length)/10000
+
+            The the goal of the function is to maximize z which should yield
+            similar goal results
+
+        *  Elitism: amount of the most recent selection that is retained
+            in the new generation
+
+        * #TODO division by zero fitness rework
         """
-        new_pop = []
-        if self.elitism:
-            for i in range(self.elitism):
-                new_pop.append(qslist[i][2])
-        else:
-            for i, _ in enumerate(qslist):
-                print(_)
-                new_pop.append(qslist[i][2])
 
-        orderlist = [qslist[i][2] for i in range(len((qslist)))]
         qslen = len(qslist)
+        scores = tuple([combine_score(qslist[i][0], qslist[i][1]) for i in range(qslen)])
+        orderlist = tuple([qslist[i][2] for i in range(qslen)])
 
-        ranks = [(i+0.5)/qslen for i in range(qslen)]  # maps linearly to linspace between (0.0, 1.0)
-        created_pop = self.ranks_to_newpop(ranks, orderlist)
-        new_pop.extend(created_pop)
+        tot = self.combine_old_new(scores, orderlist)
+        plant_scores = tot[0][:self.pop_cut]
+        plant_orders = tot[1][:self.pop_cut]
 
-        self.sol_ord = list(qslist[0][2])
-        self.sol_conn = qslist[0][0]
-        self.sol_len = qslist[0][1]
+        self.last_pop = plant_orders[:int(self.pop_cut*self.elitism)]
+        self.last_scores = tuple(plant_scores[:int(self.pop_cut*self.elitism)])
 
-        self.pop = new_pop
+
+        zMax = max(plant_scores)
+        zMin = min(plant_scores)
+        if zMax == zMin:
+            fitnesses = [(score - zMin) / (1 + zMax - zMin) for score in
+                         plant_scores]
+        else:
+            fitnesses = [(score-zMin)/(zMax-zMin) for score in plant_scores]
+
+        print("fitnesses", fitnesses)
+        self.pop = self.ranks_to_newpop(fitnesses, plant_orders)
+
+        best_con, best_len = split_score(plant_scores[0])
+        print("best len", best_len)
+        print("plant_score", plant_scores[0])
+        self.sol_ord = plant_orders[0]
+        self.sol_conn = best_con
+        self.sol_len = best_len
+
 
 
     def run_algorithm(self):
-        """main loop, tries "plants"/orders per generation.
+        """main loop, generates evaluates & saves "plants" per generation.
 
         """
         for i in range(self.gens):
-            print_start_iter(self.gn, self.nn, "Plant Propagation", 2, i+1)
+            print_start_iter(self.gn, self.nn, "Plant Propagation", i+1)
             data_clo = []  # conn, len, order
             for i, cur_ord in enumerate(self.pop):
                 satisfies = self.G.solve_order(cur_ord)
@@ -538,73 +578,24 @@ class PPA:
                 self.pop[i] = cur_ord
                 data_clo.append((cur_conn, cur_len, tuple(cur_ord)))
                 self.G.reset_nets()
-                write_connections_length_ord(self.savefile, [
+                write_connections_length(self.savefile, [
                     [(cur_conn, cur_len), cur_ord]])
             qslist = quicksort(data_clo)
             self.sol_len = qslist[1]
             self.populate(qslist[:self.pop_cut])
 
-            self.G.solve_order(self.pop[0])
+            self.G.solve_order(self.last_pop[0])
             print(self.G)
-            print("Current best path =\t", self.sol_ord, "\nCurrent best "
-                                                         "length =\t",
-                  self.sol_len)
+            print("Current best path =\t", self.sol_ord,
+                  "\nCurrent best length =\t", self.sol_len)
             self.G.reset_nets()
 
-        self.G.solve_order(self.pop[0])
+        self.G.solve_order(self.last_pop[0])
         print(self.G)
-        print("Final Path =\t", self.pop[0], "\nFinal Length =\t", \
+        print("Final Path =\t", self.last_pop[0], "\nFinal Length =\t",
               self.sol_len)
 
 
-"""
-SUBDIR = "circuit_map_100"
-GRIDNUM = 0
-X = 30
-Y = 30
-G = 100
-BATCH_SIZE = 10
-BATCHES = 2
-ADDITIONS = ['vannilla', 'A-star']
-while True:
-    for i in range(10):
-        NETLISTNUM = i
-        rc = RC(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, BATCH_SIZE, BATCHES,
-                ADDITIONS)
-        rc.run_algorithm()
-    GRIDNUM += 1
-"""
-
-"""
-SUBDIR = "circuit_map_100"
-GRIDNUM = 0
-X = 30
-Y = 30
-G = 100
-CONSEC_SWAPS = 2
-ITERATIONS = 20
-ADDITIONS = ['vannilla', 'A-star', 'Hill-Climber']
-while True:
-    for i in range(10):
-        NETLISTNUM = i
-        # grid_num, subdir, net_num, x, y, tot_gates, consec_swaps, iterations, additions
-        hc = HC(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
-                ADDITIONS)
-        hc.run_algorithm()
-    GRIDNUM += 1
-"""
-
-"""
-SUBDIR = "circuit_map_100"
-GRIDNUM = 0
-X = 30
-Y = 30
-G = 100
-CONSEC_SWAPS = 2
-ITERATIONS = 20
-FUNC_PARAMS = ['linear', 100]
-ADDITIONS = ['vannilla', 'A-star', 'Simulated-Annealing']  #for simulated annealing
-"""
 
 GRIDNUM = 0
 NETLISTNUM = 0
@@ -614,8 +605,11 @@ G = 100
 NETL_LEN = 100
 CONSEC_SWAPS = 2
 ITERATIONS = 1500
-GENERATIONS = 20
-ELITISM = 0
+GENERATIONS = 30
+ELITISM = 20
+POP_CUT = 30
+MAX_RUNNERS = 5
+ASK = False
 SUBDIR = "circuit_map_" + str(NETL_LEN)
 
 
@@ -631,32 +625,33 @@ SA_CONN_ADDITION = ["Simulated Annealing Con", "A-star, " +str(NETL_LEN) + "_len
 SA_ALL_ADDITION = ["Simulated Annealing ConLen", "A-star, " +str(NETL_LEN) + "_length NL"]
 
 
-while True:
-    if False:
-        rc = RC(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, 30, NETL_LEN, RC_ADDITION)
-        rc.run_algorithm()
-    if False:
-        hc = HC(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, 30, NETL_LEN, HC_ADDITION)
-        hc.run_algorithm()
-    if False:  #SA length
-        sa = SA(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
-                ANN_FUNC_PARAMS_BOTH, SA_LEN_ADDITION)
-        sa.run_algorithm()
-    if False:  #SA connections
-        sa = SA(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
-                ANN_FUNC_PARAMS_BOTH, SA_CONN_ADDITION)
-        sa.run_algorithm()
-    if False:  #SA all
-        sa = SA(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
-                ANN_FUNC_PARAMS_BOTH, SA_ALL_ADDITION)
-        sa.run_algorithm()
-    if True:   # PPA standard
-        ppa = PPA(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, GENERATIONS,
-                elitism=0, pop_cut=20, max_runners=5)
-        ppa.run_algorithm()
-    NETLISTNUM += 1
-    if NETLISTNUM > 9:
-        break
+if __name__ == '__main__':
+    while True:
+        if False:
+            rc = RC(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, 30, NETL_LEN, RC_ADDITION, ask=True)
+            rc.run_algorithm()
+        if False:
+            hc = HC(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, 30, NETL_LEN, HC_ADDITION, ask=True)
+            hc.run_algorithm()
+        if False:  #SA length
+            sa = SA(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
+                    ANN_FUNC_PARAMS_BOTH, SA_LEN_ADDITION, ask=True)
+            sa.run_algorithm()
+        if False:  #SA connections
+            sa = SA(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
+                    ANN_FUNC_PARAMS_BOTH, SA_CONN_ADDITION, ask=True)
+            sa.run_algorithm()
+        if False:  #SA all
+            sa = SA(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
+                    ANN_FUNC_PARAMS_BOTH, SA_ALL_ADDITION, ask=True)
+            sa.run_algorithm()
+        if True:   # PPA standard
+            ppa = PPA(SUBDIR, GRIDNUM, NETLISTNUM, X, Y, G, GENERATIONS,
+                    elitism=ELITISM, pop_cut=POP_CUT, max_runners=MAX_RUNNERS, ask=False)
+            ppa.run_algorithm()
+        NETLISTNUM += 1
+        if NETLISTNUM > 9:
+            break
 
 
 

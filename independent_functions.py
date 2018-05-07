@@ -5,26 +5,27 @@ import operator
 from shutil import copy
 
 from random import randint
-from math import sqrt
+from math import sqrt, floor
 
 # for plotting
 # https://matplotlib.org/mpl_toolkits/mplot3d/tutorial.html
 
-import matplotlib as plt
+import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 
 
 ###### Plotting ########################
-
-shapes_string = "- -- -. : . , o v ^ > < 1 2 3 4 s p * h + D d"
+# circuit
+########################################
+shapes_string = "- -- -. :"
 SHAPES = shapes_string.split(' ')
 COLOURS = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
 
 col_len = len(COLOURS)
 
 def get_markers(n):
-    return [SHAPES[i//col_len] + COLOURS[i%col_len] for i in range(n)]
+    return [SHAPES[i%4] + COLOURS[i%col_len] for i in range(n)]
 
 
 def paths_to_plotlines(paths):
@@ -42,9 +43,10 @@ def paths_to_plotlines(paths):
     zpp = []
 
     for path in paths:
+        print(path)
         pxs = [spot[0] for spot in path]
-        pys = [spot[0] for spot in path]
-        pzs = [spot[0] for spot in path]
+        pys = [spot[1] for spot in path]
+        pzs = [spot[2] for spot in path]
 
         xpp.append(pxs)
         ypp.append(pys)
@@ -56,9 +58,14 @@ def remove_empty_paths(paths, order):
     clean_paths = []
     clean_order = []
     for i, path in enumerate(paths):
-        if path:
+        print(path)
+        if len(path)-1:
+            print("added")
             clean_paths.append(path)
             clean_order.append(order[i])
+        else:
+            print("not added")
+    print(len(clean_order))
     return clean_paths, clean_order
 
 
@@ -81,18 +88,61 @@ def plot_circuit(paths, order, gates, gate_tags):
     original_len = len(order)
     c_paths, c_order = remove_empty_paths(paths, order)
     xpp, ypp, zpp = paths_to_plotlines(c_paths)
+    xgs, ygs, zgs = split_gates(gates)
     markers = get_markers(len(xpp))
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
 
     plotcount = len(xpp)
+    ax.set_title(create_plot_title(original_len, plotcount))
+
     for i in range(plotcount):
-        Axes3D.plot(xpp[i], ypp[i], markers[i], label=c_order[i], zs=zpp[i], zdir='x')
-        Axes3D.title(create_plot_title(original_len, plotcount))
-    Axes3D.imshow()
+        ax.plot(xpp[i], ypp[i], zpp[i], markers[i], label=c_order[i])
+
+    ax.scatter3D(xgs, ygs, zgs)
+    fig.savefig("temp_plus_gates.png")
 
 
 def create_plot_title(original_len, placed):
     return "netlist_placement for " + str(placed) +" out of" + str(original_len) + \
            "nets"
+
+
+def split_gates(gates):
+    print("gates", gates)
+    for gate in gates:
+        print(gate)
+    xgs = [gate[0] for gate in gates]
+    ygs = [gate[1] for gate in gates]
+    zgs = [gate[2] for gate in gates]
+    return xgs, ygs, zgs
+
+
+###### Plotting ########################
+# results
+########################################
+
+def file_vars(fname):
+    connections = []
+    lengths = []
+    with open(fname, 'r') as f:
+        for line in f:
+            line = f.readline()
+            line = line.split("\t")[0]
+            line = line.split(",")
+            connections.append(line[0])
+            lengths.append(line[1])
+    return connections, lengths
+
+def plot_values(series, labels):
+    fig = plt.figure()
+    plot_len = len(series[0])
+    xs = [i for i in range(plot_len)]
+    for i, values in enumerate(series):
+        plt.plot(xs, values, label=labels[i])
+    #Todo make appropraite per results
+    fig.savefig(",".join(labels)+".png")
+
 
 
 ###### Sorting ########################
@@ -182,6 +232,17 @@ def quicksort(arr):
         more = quicksort(more)
     return less + pivotList + more
 
+def combine_score(connections, length):
+    frac_part = float(10000-length)/10000.
+    return float(connections)+frac_part
+
+def split_score(combination):
+    print("combination", combination)
+    connections = floor(combination)
+    print("connections", connections)
+    length = -10000. * (combination - float(connections)) + 10000
+    print("length", length)
+    return connections, length
 
 ###### Filename Generating ############
 def create_fpath(subdir, outf):
@@ -203,23 +264,24 @@ def get_name_circuitfile(gridnum, x, y, tot_gates):
     return "Gateplatform_" + str(gridnum) + "_" + str(x) + "x" + str(
         y) + "g" + str(tot_gates) + ".csv"
 
-def create_data_directory(main_subdir, gridnum, x, y, tot_gates, listnum, additions):
+def create_data_directory(main_subdir, gridnum, x, y, tot_gates, listnum, additions, ask=True):
     gridfn = get_name_circuitfile(gridnum, x, y, tot_gates)
     netfn = get_name_netfile(gridnum, listnum)
     new_subdir = '_'.join(additions) + '_' + gridfn[:-4] + "_" + netfn
     rel_path = os.path.join(main_subdir, new_subdir)
     script_dir = os.path.dirname(__file__)
     dir_check_path = os.path.join(script_dir, rel_path)
-    ans = input("current additions are as follows:" + str(additions) + "does this match what you are trying to record? (Y/n)")
-    while True:
-        if ans == 'Y':
-            break
-        elif ans == 'n':
-            print('program terminated')
-            exit(0)
-        else:
-            print('invalid answer, did you perhaps not enter the capital "Y"?')
-            ans = input("try input again (Y/n)")
+    if ask:
+        ans = input("current additions are as follows:" + str(additions) + "does this match what you are trying to record? (Y/n)")
+        while True:
+            if ans == 'Y':
+                break
+            elif ans == 'n':
+                print('program terminated')
+                exit(0)
+            else:
+                print('invalid answer, did you perhaps not enter the capital "Y"?')
+                ans = input("try input again (Y/n)")
     if not os.path.exists(dir_check_path):
         os.mkdir(dir_check_path)
         copy(create_fpath(main_subdir,gridfn), os.path.join(dir_check_path, gridfn))
@@ -367,10 +429,10 @@ def transform_print(val, Advanced_heuristics):
             raise NotImplementedError
 
 
-def print_start_iter(gridnum, netnum, algorithm, swaps, iteration):
+def print_start_iter(gridnum, netnum, algorithm, iteration):
     print("############################")
-    print("Grid", gridnum, "net", netnum)
-    print(algorithm, swaps, "swaps")
+    print("Algorithm", algorithm)
+    print("Grid", gridnum, "\nnet", netnum)
     print("Starting iteration", iteration)
     print("############################")
 
