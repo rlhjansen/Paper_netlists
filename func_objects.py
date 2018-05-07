@@ -628,9 +628,9 @@ CONSEC_SWAPS = 2
 ITERATIONS = 1500
 
 #PPA
-GENERATIONS = 30
+GENERATIONS = 120
 ELITISM = 20
-POP_CUT = 30
+POP_CUT = 20
 MAX_RUNNERS = 5
 SUBDIR = "circuit_map_git"
 
@@ -640,7 +640,7 @@ ANN_FUNC_PARAMS_LEN = ["length", "geman", 700, 10, None, None]
 ANN_FUNC_PARAMS_CONN = ["connections", "geman", None, None, 100, 1]
 ANN_FUNC_PARAMS_BOTH = ["all", "geman", 700, 10, 100, 1]
 
-RC_ADDITION = ["random collector", "A-star, " + str(NETL_LEN) + "_length NL"]
+RC_ADDITION = ["random collector", "TEST_A-star, " + str(NETL_LEN) + "_length NL"]
 HC_ADDITION = ["Hillclimber", "A-star,, " +str(NETL_LEN) + "_length NL"]
 SA_LEN_ADDITION = ["Simulated Annealing Len", "A-star, " +str(NETL_LEN) + "_length NL"]
 SA_CONN_ADDITION = ["Simulated Annealing Con", "A-star, " +str(NETL_LEN) + "_length NL"]
@@ -650,24 +650,24 @@ SA_ALL_ADDITION = ["Simulated Annealing ConLen", "A-star, " +str(NETL_LEN) + "_l
 if __name__ == '__main__':
     for NETLIST_NUM in NETLISTNUMS:
         if True:
-            rc = RC(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, BATCHES, RC_ADDITION, ask=False)
+            rc = RC(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, RC_ADDITION, BATCHES, ask=ASK)
             rc.run_algorithm()
         if False:
-            hc = HC(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, 30, NETL_LEN, HC_ADDITION, ask=False)
+            hc = HC(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, 30, NETL_LEN, HC_ADDITION, ask=ASK)
             hc.run_algorithm()
         if False:  #SA length
             sa = SA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
-                    ANN_FUNC_PARAMS_BOTH, SA_LEN_ADDITION, ask=True)
+                    ANN_FUNC_PARAMS_BOTH, SA_LEN_ADDITION, ask=ASK)
             sa.run_algorithm()
         if False:  #SA connections
             sa = SA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
-                    ANN_FUNC_PARAMS_BOTH, SA_CONN_ADDITION, ask=True)
+                    ANN_FUNC_PARAMS_BOTH, SA_CONN_ADDITION, ask=ASK)
             sa.run_algorithm()
         if False:  #SA all
             sa = SA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
-                    ANN_FUNC_PARAMS_BOTH, SA_ALL_ADDITION, ask=True)
+                    ANN_FUNC_PARAMS_BOTH, SA_ALL_ADDITION, ask=ASK)
             sa.run_algorithm()
         if False:   # PPA standard
             ppa = PPA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, GENERATIONS,
-                    elitism=ELITISM, pop_cut=POP_CUT, max_runners=MAX_RUNNERS, ask=False)
+                    elitism=ELITISM, pop_cut=POP_CUT, max_runners=MAX_RUNNERS, ask=ASK)
             ppa.run_algorithm()
