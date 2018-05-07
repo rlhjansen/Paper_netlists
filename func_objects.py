@@ -671,6 +671,3 @@ if __name__ == '__main__':
             ppa = PPA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, GENERATIONS,
                     elitism=ELITISM, pop_cut=POP_CUT, max_runners=MAX_RUNNERS, ask=False)
             ppa.run_algorithm()
-
-
-
