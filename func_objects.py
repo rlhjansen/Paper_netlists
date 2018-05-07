@@ -50,6 +50,7 @@ class HC:
                                               tot_gates, net_num, additions)
 
     def check_climb(self, cur_conn, cur_ord, cur_len):
+        # Todo HC zorgen dat ook naar lengte wordt gekeken als niet alles connected is 
         if not self.all_connected:
             if cur_conn > self.sol_conn:
                 self.sol_ord = cur_ord
@@ -652,6 +653,3 @@ if __name__ == '__main__':
         NETLISTNUM += 1
         if NETLISTNUM > 9:
             break
-
-
-
