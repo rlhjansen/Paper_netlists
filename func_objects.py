@@ -583,7 +583,7 @@ class PPA:
         for i in range(self.gens):
             print_start_iter(self.gn, self.nn, "Plant Propagation", i+1)
             data_clo = []  # conn, len, order
-            for i, cur_ord in enumerate(self.pop):
+            for j, cur_ord in enumerate(self.pop):
                 satisfies = self.G.solve_order(cur_ord)
                 cur_conn, cur_len = satisfies
                 data_clo.append((cur_conn, cur_len, tuple(cur_ord)))
@@ -629,8 +629,8 @@ ITERATIONS = 1500
 
 #PPA
 GENERATIONS = 120
-ELITISM = 20
-POP_CUT = 20
+ELITISM = 30
+POP_CUT = 30
 MAX_RUNNERS = 5
 SUBDIR = "circuit_map_git"
 
@@ -649,7 +649,7 @@ SA_ALL_ADDITION = ["Simulated Annealing ConLen", "A-star, " +str(NETL_LEN) + "_l
 
 if __name__ == '__main__':
     for NETLIST_NUM in NETLISTNUMS:
-        if True:
+        if False:
             rc = RC(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, RC_ADDITION, BATCHES, ask=ASK)
             rc.run_algorithm()
         if False:
@@ -667,7 +667,7 @@ if __name__ == '__main__':
             sa = SA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
                     ANN_FUNC_PARAMS_BOTH, SA_ALL_ADDITION, ask=ASK)
             sa.run_algorithm()
-        if False:   # PPA standard
+        if True:   # PPA standard
             ppa = PPA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, GENERATIONS,
                     elitism=ELITISM, pop_cut=POP_CUT, max_runners=MAX_RUNNERS, ask=ASK)
             ppa.run_algorithm()
