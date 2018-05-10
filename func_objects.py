@@ -641,7 +641,7 @@ ANN_FUNC_PARAMS_CONN = ["connections", "geman", None, None, 100, 1]
 ANN_FUNC_PARAMS_BOTH = ["all", "geman", 700, 10, 100, 1]
 
 RC_ADDITION = ["random collector", "TEST_A-star, " + str(NETL_LEN) + "_length NL"]
-HC_ADDITION = ["Hillclimber", "A-star, " +str(NETL_LEN) + "_length NL, VR_1."]
+HC_ADDITION = ["Hillclimber", "A-star, " +str(NETL_LEN) + "_length NL"]
 SA_LEN_ADDITION = ["Simulated Annealing Len", "A-star, " +str(NETL_LEN) + "_length NL"]
 SA_CONN_ADDITION = ["Simulated Annealing Con", "A-star, " +str(NETL_LEN) + "_length NL"]
 SA_ALL_ADDITION = ["Simulated Annealing ConLen", "A-star, " +str(NETL_LEN) + "_length NL"]
@@ -656,7 +656,7 @@ if __name__ == '__main__':
             if True:
                 #subdir, grid_num, net_num, x, y, tot_gates,consec_swaps, iterations, addition
                 hc = HC(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
-                        HC_ADDITION+['_rep'+str(i)], ask=ASK)
+                        HC_ADDITION+[', VR1.' +str(i) + '_'], ask=ASK)
                 hc.run_algorithm()
             if False:  #SA length
                 sa = SA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
