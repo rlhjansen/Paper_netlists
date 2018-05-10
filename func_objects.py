@@ -657,6 +657,7 @@ if __name__ == '__main__':
                 #subdir, grid_num, net_num, x, y, tot_gates,consec_swaps, iterations, addition
                 hc = HC(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
                         HC_ADDITION+[', VR1.' +str(i) + '_'], ask=ASK)
+
                 hc.run_algorithm()
             if False:  #SA length
                 sa = SA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
