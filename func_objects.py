@@ -16,7 +16,7 @@ from independent_functions import swap_up_to_x_elems, \
 
 class HC:
     def __init__(self, subdir, grid_num, net_num, x, y, tot_gates,
-                 consec_swaps, iterations, additions, chance_on_same=.5):
+                 consec_swaps, iterations, additions, chance_on_same=.5, ask=True):
         """Initializes the HillClimber solver
 
         :param subdir: Subdirectory name where files are located
@@ -39,7 +39,7 @@ class HC:
         self.G = G
         self.iterations = iterations
         self.cur_ords = cur_ords
-        self.sol_len = 5000000
+        self.sol_len = 5000
         self.sol_ord = cur_ords[0]
         self.tot_nets = tot_nets
         self.swaps = consec_swaps
@@ -87,7 +87,7 @@ class HC:
 
     def run_algorithm(self):
         for i in range(self.iterations):
-            print_start_iter(self.gn, self.nn, self.name, self.swaps, i)
+            print_start_iter(self.gn, self.nn, self.name, i)
             if self.sol_ord:
                 cur_ords = swap_up_to_x_elems(self.sol_ord, self.swaps)
 
@@ -631,7 +631,7 @@ ITERATIONS = 1500
 GENERATIONS = 120
 ELITISM = 30
 POP_CUT = 30
-MAX_RUNNERS = 5
+MAX_RUNNERS = 7
 SUBDIR = "circuit_map_git"
 
 
@@ -652,9 +652,10 @@ if __name__ == '__main__':
         if False:
             rc = RC(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, RC_ADDITION, BATCHES, ask=ASK)
             rc.run_algorithm()
-        if False:
-            hc = HC(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, 30, NETL_LEN, HC_ADDITION, ask=ASK)
-            hc.run_algorithm()
+        if True:
+            for i in range(10):
+                hc = HC(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, 30, NETL_LEN, (HC_ADDITION+['_rep'+str(i)]), ask=ASK)
+                hc.run_algorithm()
         if False:  #SA length
             sa = SA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
                     ANN_FUNC_PARAMS_BOTH, SA_LEN_ADDITION, ask=ASK)
@@ -667,7 +668,7 @@ if __name__ == '__main__':
             sa = SA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
                     ANN_FUNC_PARAMS_BOTH, SA_ALL_ADDITION, ask=ASK)
             sa.run_algorithm()
-        if True:   # PPA standard
+        if False:   # PPA standard
             ppa = PPA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, GENERATIONS,
                     elitism=ELITISM, pop_cut=POP_CUT, max_runners=MAX_RUNNERS, ask=ASK)
             ppa.run_algorithm()
