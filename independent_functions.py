@@ -299,7 +299,13 @@ def create_data_directory(main_subdir, gridnum, x, y, tot_gates, listnum, additi
                 ans = input("Continuing will append pre-recorded data\nContinue? (Y/n)")
     return os.path.join(dir_check_path, 'data ' + '_'.join(additions) + '.tsv')
 
+def get_subdirs(a_dir):
+    return [name for name in os.listdir(a_dir)]
 
+def get_res_subdirs(a_dir):
+    forbidden = ['.py', 'txt', 'lsx', '.md', 'png']
+    _list = [name for name in os.listdir(a_dir) if (name[-3:] not in forbidden)]
+    return _list
 
 
 def gates_from_lol(lol):
@@ -344,7 +350,6 @@ def prodsum(iterable):
     return functools.reduce(operator.mul, iterable, 1)
 
 
-# calculate the manhattan distance between two points
 def manhattan(loc1, loc2):
     """
     :param loc1: tuple, coordinate
@@ -354,6 +359,7 @@ def manhattan(loc1, loc2):
     manh_d = sum([abs(loc1[i] - loc2[i]) for i in range(len(loc1))])
     return manh_d
 
+
 def euclidian(loc1, loc2):
     """
     :param loc1: tuple, coordinate
@@ -362,8 +368,6 @@ def euclidian(loc1, loc2):
     """
     eucl_d = sqrt(sum([abs(loc1[i] - loc2[i])**2 for i in range(len(loc1))]))
     return eucl_d
-
-
 
 
 def count_to_pos(count, params):
@@ -443,6 +447,11 @@ def print_final_state(grid, best_order, best_len, \
     print("Final Path =\t", best_order, )
     print("Final Length =\t", best_len)
     print("All connected =\t", nets_solved, "/", tot_nets)
+
+def printbar(n):
+    print('#'*n)
+    print('#'*n)
+
 
 def write_connections_length_ord(filename, con_len_list):
     print(con_len_list)

@@ -49,7 +49,7 @@ class HC:
         additions += [str(consec_swaps) + "swaps",
                       str(iterations) + "iterations"]
         self.savefile = create_data_directory(subdir, grid_num, x, y,
-                                              tot_gates, net_num, additions)
+                                              tot_gates, net_num, additions, ask=ASK)
 
     def check_climb(self, cur_conn, cur_ord, cur_len):
         if not self.all_connected:
