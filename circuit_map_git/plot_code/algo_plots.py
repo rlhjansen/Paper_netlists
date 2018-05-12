@@ -5,8 +5,11 @@ class algo_plots:
 
     def __init__(self):
         self.hc_dir = 'HC/'
-        self.hc_dct = self.get_data()
-        self.hc_plot()
+        self.ppa_dir = 'PPA/'
+        # self.hc_dct = self.hc_data()
+        self.ppa_dct = self.ppa_data()
+        # self.hc_plot()
+
 
     def hc_data(self):
 
@@ -40,6 +43,28 @@ class algo_plots:
             plt.ylabel('score (connections.length)')
             plt.xlabel('iterations')
         plt.show()
+
+    def ppa_data(self):
+
+        ppa_files = os.listdir(self.ppa_dir)
+        ppa_dct = {}
+        result_dct = {}
+        result_dict = {}
+        for i, file in enumerate(ppa_files):
+            ppa_name =(file.strip('.tsv').split('_')[-1])
+            ppa_dct[i] = {}
+            with open(self.ppa_dir+file) as csvfile:
+                csv_rd = csv.reader(csvfile)
+                result_dct[i]['iter'], result_dct[i]['score'] = it_lst, score_lst
+                gen_count, gen_lst = 1, [], []
+                for j, row in enumerate(csv_rd):
+                    if row[0].startswith('##'):
+                        ppa_dct[ppa_name][gen_count] = gen_lst
+                        print(ppa_dct[ppa_name][gen_count])
+                        gen_lst,iter_lst = [],[]
+                        gen_count += 1
+                    else:
+                        gen_lst.append(float(row[0]+'.'+row[1]))
 
 
 
