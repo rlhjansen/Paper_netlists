@@ -9,7 +9,7 @@ class algo_plots:
         # self.hc_dct = self.hc_data()
         self.ppa_dct = self.ppa_data()
         # self.hc_plot()
-
+        self.ppa_plot()
 
     def hc_data(self):
 
@@ -47,25 +47,34 @@ class algo_plots:
 
     def ppa_data(self):
 
-        ppa_files = os.listdir(self.ppa_dir)
         ppa_dct = {}
-        result_dct = {}
+        ppa_files = os.listdir(self.ppa_dir)
+
         for i, file in enumerate(ppa_files):
-            ppa_name =(file.strip('.tsv').split('_')[-1])
+            ppa_name = (file.strip('.tsv').split('_')[-1])
             ppa_dct[i] = {}
             with open(self.ppa_dir+file) as csvfile:
                 csv_rd = csv.reader(csvfile)
-                gen_count, gen_lst,iter_lst = 1, [], []
-                for j, row in enumerate(csv_rd):
+                score_lst, iter_lst = [],[]
+                gen_count, gen_lst = 1, []
+                for row in csv_rd:
                     if row[0].startswith('##'):
-                        ppa_dct[ppa_name][gen_count] = gen_lst
-                        print(ppa_dct[ppa_name][gen_count])
-                        gen_lst,iter_lst = [],[]
                         gen_count += 1
                     else:
-                        gen_lst.append(float(row[0]+'.'+row[1]))
-                        iter_lst.append(j)
-                result_dct[i]['iter'], result_dct[i]['score'] = iter_lst, score_lst
+                        cur_score = float(row[0]+'.'+row[1])
+                        score_lst.append(cur_score)
+                        gen_lst.append(gen_count)
 
+                ppa_dct[i]['score'] = score_lst
+                ppa_dct[i]['gen'] = gen_lst
+        return ppa_dct
 
+    def ppa_plot(self):
+
+        for key,item in self.ppa_dct.items():
+            print('jeej')
+            plt.plot(item['score'],'b-',linewidth=0.1)
+            plt.ylabel('score (connections.length)')
+            plt.xlabel('iterations')
+        plt.savefig('test.png')
 algo_plots()
