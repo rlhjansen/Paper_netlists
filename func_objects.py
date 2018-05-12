@@ -48,8 +48,7 @@ class HC:
         self.chance = chance_on_same
         additions += [str(consec_swaps) + "swaps",
                       str(iterations) + "iterations"]
-        self.savefile = create_data_directory(subdir, grid_num, x, y,
-                                              tot_gates, net_num, additions, ask=ASK)
+        self.savefile = create_data_directory(subdir, grid_num, x, y, tot_gates, net_num, additions, ask=ASK)
 
     def check_climb(self, cur_conn, cur_ord, cur_len):
         if not self.all_connected:
@@ -424,8 +423,7 @@ class PPA:
     """
     # Todo implement a last_generation attribute, to save computation time
     # Todo save (maximum) generation (or count)
-    def __init__(self, subdir, grid_num, net_num, x, y, g, max_generations,
-                elitism=0, pop_cut=20, max_runners=4, ask=True):
+    def __init__(self, subdir, grid_num, net_num, x, y, g, max_generations, additions=[], elitism=0, pop_cut=20, max_runners=4, ask=True):
         """
 
         :param subdir: Subdirectory name where files are located
@@ -459,6 +457,7 @@ class PPA:
                        "max_runners" + str(max_runners),
                        "elitism" + str(elitism),
                        "generations" + str(max_generations)]
+        FUNC_PARAMS = additions+FUNC_PARAMS
         self.savefile = create_data_directory(subdir, grid_num, x, y,
                                               g, net_num, FUNC_PARAMS, ask=ask)
 
@@ -648,15 +647,15 @@ SA_ALL_ADDITION = ["Simulated Annealing ConLen", "A-star, " +str(NETL_LEN) + "_l
 
 
 if __name__ == '__main__':
-    for i in range(10):
-        for NETLIST_NUM in NETLISTNUMS:
+    for NETLIST_NUM in NETLISTNUMS:
+        for i in range(10):
             if False:
                 rc = RC(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, RC_ADDITION, BATCHES, ask=ASK)
                 rc.run_algorithm()
-            if True:
+            if False:
                 #subdir, grid_num, net_num, x, y, tot_gates,consec_swaps, iterations, addition
                 hc = HC(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
-                        HC_ADDITION+[', VR1.' +str(i) + '_'], ask=ASK)
+                        HC_ADDITION+[', VR3.' +str(i) + '_'], ask=ASK)
 
                 hc.run_algorithm()
             if False:  #SA length
@@ -671,7 +670,6 @@ if __name__ == '__main__':
                 sa = SA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
                         ANN_FUNC_PARAMS_BOTH, SA_ALL_ADDITION, ask=ASK)
                 sa.run_algorithm()
-            if False:   # PPA standard
-                ppa = PPA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, GENERATIONS,
-                        elitism=ELITISM, pop_cut=POP_CUT, max_runners=MAX_RUNNERS, ask=ASK)
+            if True:   # PPA standard
+                ppa = PPA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, GENERATIONS, additions=[', VY2.' +str(i) + '_'], elitism=ELITISM, pop_cut=POP_CUT, max_runners=MAX_RUNNERS, ask=ASK)
                 ppa.run_algorithm()

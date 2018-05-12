@@ -5,7 +5,7 @@ class algo_plots:
 
     def __init__(self):
         self.hc_dir = 'HC/'
-        self.ppa_dir = 'PPA/'
+        #self.ppa_dir = 'PPA/'
         self.hc_dct = self.hc_data()
         # self.ppa_dct = self.ppa_data()
         self.hc_plot()
@@ -26,8 +26,7 @@ class algo_plots:
                 print(file)
                 h_val = 0.0000
                 for idx,row in enumerate(csv_rd):
-                    print(row)
-                    break
+                    #print(row)
                     cur_con, cur_len = int(row[0]), int(row[1][0:4])
                     if cur_con > high_connect or (cur_con == high_connect and cur_len < high_len):
                         high_connect, high_len = copy.copy(cur_con), copy.copy(cur_len)
