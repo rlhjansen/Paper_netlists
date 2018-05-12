@@ -1,15 +1,21 @@
 import csv, matplotlib,os, copy
 import matplotlib.pyplot as plt
+from scipy.stats import gaussian_kde
+import numpy as np
+
 
 class algo_plots:
 
     def __init__(self):
         self.hc_dir = 'HC/'
         self.ppa_dir = 'PPA/'
+        self.rd_dir = 'RD/'
         # self.hc_dct = self.hc_data()
-        self.ppa_dct = self.ppa_data()
         # self.hc_plot()
-        self.ppa_plot()
+        # self.ppa_dct = self.ppa_data()
+        # self.ppa_plot()
+        self.rd_dct = self.rd_data()
+        self.rd_plot()
 
     def hc_data(self):
 
@@ -77,4 +83,42 @@ class algo_plots:
             plt.ylabel('score (connections.length)')
             plt.xlabel('iterations')
         plt.savefig('test.png')
+
+    def rd_data(self):
+
+        rd_dct = {}
+        rd_files = os.listdir(self.rd_dir)
+        netlists = ['netlist 1','netlist 3','netlist 4']
+        for i, file in enumerate(rd_files):
+            rd_name = (file.strip('.tsv').split('_')[-1])
+            rd_dct[i] = {}
+            with open(self.rd_dir+file) as csvfile:
+                csv_rd = csv.reader(csvfile)
+                score_lst, iter_lst = [],[]
+                for row in csv_rd:
+                    if row[0].startswith('##'):
+                        continue
+                    else:
+                        cur_score = float(row[0]+'.'+row[1])
+                        score_lst.append(cur_score)
+
+                rd_dct[i]['score'] = score_lst
+                rd_dct[i]['netlist'] = netlists[i]
+        return rd_dct
+
+    def rd_plot(self):
+
+        for key,item in self.rd_dct.items():
+            print('jeej')
+            density = gaussian_kde(item['score'])
+            xs = np.linspace(40, 90, 1000)
+            plt.plot(xs, density(xs), label=item['netlist'])
+            #plt.plot(item['score'],'b-',linewidth=0.1)
+            plt.ylabel('density')
+            plt.xlabel('score (connections.length)')
+            plt.title('density of random configuration scores')
+            plt.legend()
+        plt.savefig('test2.png')
+
+
 algo_plots()
