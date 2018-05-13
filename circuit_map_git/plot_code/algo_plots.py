@@ -3,18 +3,22 @@ import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 import numpy as np
 
+def combine_score(connections, length):
+    frac_part = float(10000-length)/10000.
+    return float(connections)+frac_part
+
 
 class algo_plots:
 
     def __init__(self):
         self.hc_dir = 'HC/'
         self.ppa_dir = 'PPA/'
+        self.rd_dir = 'RD/'
         self.hc_dct = self.hc_data()
         self.ppa_dct = self.ppa_data()
-        # self.hc_plot()
-        self.hc_plot()
-        self.rd_dir = 'RD/'
         self.rd_dct = self.rd_data()
+        self.hc_plot()
+        self.ppa_plot()
         self.rd_plot()
 
     def hc_data(self):
@@ -35,7 +39,8 @@ class algo_plots:
                     cur_con, cur_len = int(row[0]), int(row[1][0:4])
                     if cur_con > high_connect or (cur_con == high_connect and cur_len < high_len):
                         high_connect, high_len = copy.copy(cur_con), copy.copy(cur_len)
-                        h_val = row[0]+'.'+row[1][0:4]
+                        #h_val = row[0]+'.'+row[1][0:4]
+                        h_val = combine_score(high_connect, high_len)
                     it_lst.append(idx)
                     score_lst.append(float(h_val))
                 result_dict[i]['iter'], result_dict[i]['score'] = it_lst, score_lst
@@ -54,7 +59,9 @@ class algo_plots:
             plt.ylabel('score (connections.length)')
             plt.xlabel('iterations')
         plt.legend()
-        plt.savefig('test.png')
+        plt.savefig('hc_plot.png')
+        plt.gcf()
+
 
     def ppa_data(self):
 
@@ -78,7 +85,8 @@ class algo_plots:
                         print(sort_lst)
                         temp_lst = []
                     else:
-                        cur_score = float(row[0]+'.'+row[1])
+                        #cur_score = float(row[0]+'.'+row[1])
+                        cur_score = combine_score(int(row[0]), int(row[1]))
                         score_lst.append(cur_score)
                         gen_lst.append(gen_count)
                         temp_lst.append(cur_score)
@@ -95,7 +103,9 @@ class algo_plots:
             plt.plot(item['score'],'b-',linewidth=0.1)
             plt.ylabel('score (connections.length)')
             plt.xlabel('iterations')
-        plt.savefig('test.png')
+        plt.savefig('ppa_plot.png')
+        plt.gcf()
+
 
     def rd_data(self):
 
@@ -112,7 +122,8 @@ class algo_plots:
                     if row[0].startswith('##'):
                         continue
                     else:
-                        cur_score = float(row[0]+'.'+row[1])
+                        #cur_score = float(row[0]+'.'+row[1])
+                        cur_score = combine_score(int(row[0]), int(row[1]))
                         score_lst.append(cur_score)
 
                 rd_dct[i]['score'] = score_lst
@@ -131,7 +142,8 @@ class algo_plots:
             plt.xlabel('score (connections.length)')
             plt.title('density of random configuration scores')
             plt.legend()
-        plt.savefig('test2.png')
+        plt.savefig('rd_plot.png')
+        plt.gcf()
 
 
 algo_plots()

@@ -630,7 +630,7 @@ ITERATIONS = 5000
 GENERATIONS = 120
 ELITISM = 30
 POP_CUT = 30
-MAX_RUNNERS = 7
+MAX_RUNNERS = 5
 SUBDIR = "circuit_map_git"
 
 
@@ -671,5 +671,5 @@ if __name__ == '__main__':
                         ANN_FUNC_PARAMS_BOTH, SA_ALL_ADDITION, ask=ASK)
                 sa.run_algorithm()
             if True:   # PPA standard
-                ppa = PPA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, GENERATIONS, additions=[', VY2.' +str(i) + '_'], elitism=ELITISM, pop_cut=POP_CUT, max_runners=MAX_RUNNERS, ask=ASK)
+                ppa = PPA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, GENERATIONS, additions=[', VR2.' +str(i) + '_'], elitism=ELITISM, pop_cut=POP_CUT, max_runners=MAX_RUNNERS, ask=ASK)
                 ppa.run_algorithm()
