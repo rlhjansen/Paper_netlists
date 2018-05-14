@@ -17,9 +17,9 @@ class algo_plots:
         self.hc_dct = self.hc_data()
         self.ppa_dct = self.ppa_data()
         self.rd_dct = self.rd_data()
-        self.hc_plot()
-        self.ppa_plot()
-        self.rd_plot()
+        self.hc_plot(ppa_compare=True, all=False, best=True, worst=True, median=True)
+        #self.ppa_plot()
+        #self.rd_plot()
 
     def hc_data(self):
 
@@ -45,23 +45,47 @@ class algo_plots:
                     score_lst.append(float(h_val))
                 result_dict[i]['iter'], result_dict[i]['score'] = it_lst, score_lst
         # print(result_dict)
+        best, bi = 0, None
+        worst, wi = 100, None
+        s_endpoints = sorted([result_dict[i]['score'][-1] for i in range(len(result_dict))])
+        median, mi = s_endpoints[int(len(s_endpoints)/2)], None
+        for i in range(len(result_dict)):
+            if result_dict[i]['score'][-1] < worst:
+                worst, wi = result_dict[i]['score'][-1], i
+            if result_dict[i]['score'][-1] > best:
+                best, bi = result_dict[i]['score'][-1], i
+            if result_dict[i]['score'][-1] == median:
+                mi = i
+        self.besthc = bi
+        self.worsthc = wi
+        self.medianhc = mi
         return result_dict
 
-    def hc_plot(self):
-
-        for key,item in self.hc_dct.items():
-            print(key)
-            plt.plot(item['iter'],item['score'],label='hc{}'.format(key))
-            plt.ylabel('score (connections.length)')
-            plt.xlabel('iterations')
-        for key,item in self.ppa_dct.items():
-            plt.plot(item['sort'],'b-', linewidth=0.5,label='ppa{}'.format(key))
-            plt.ylabel('score (connections.length)')
-            plt.xlabel('iterations')
+    def hc_plot(self, all=True, ppa_compare=False, best=False, worst=False, median=False):
+        plt.clf()
+        plt.figure(figsize=(10, 5))
+        plt.ylabel('score (connections.length)')
+        plt.xlabel('function evaluations')
+        plt.title('Algorithm comparison of hillclimber and plant propagation for netlist with 100 nets')
+        if all:
+            for key,item in self.hc_dct.items():
+                #print(key)
+                plt.plot(item['iter'],item['score'],label='hc{}'.format(key))
+        if ppa_compare:
+            for key,item in self.ppa_dct.items():
+                plt.plot(item['sort'],'b-', linewidth=0.5,label='sample ppa')
+                break
+        if best:
+            bi = self.besthc
+            plt.plot(self.hc_dct[bi]['iter'], self.hc_dct[bi]['score'], linewidth=1.2, label='best hc')
+        if worst:
+            wi = self.worsthc
+            plt.plot(self.hc_dct[wi]['iter'], self.hc_dct[wi]['score'], linewidth=1.2, label='worst hc')
+        if median:
+            mi = self.medianhc
+            plt.plot(self.hc_dct[mi]['iter'], self.hc_dct[mi]['score'], linewidth=1.2, label='median hc')
         plt.legend()
-        plt.savefig('hc_plot.png')
-        plt.gcf()
-
+        plt.savefig('hc_plot3.png')
 
     def ppa_data(self):
 
@@ -82,7 +106,7 @@ class algo_plots:
                         temp_lst.sort()
                         # print(temp_lst)
                         sort_lst += temp_lst
-                        print(sort_lst)
+                        #print(sort_lst)
                         temp_lst = []
                     else:
                         #cur_score = float(row[0]+'.'+row[1])
@@ -97,14 +121,13 @@ class algo_plots:
         return ppa_dct
 
     def ppa_plot(self):
-
+        plt.clf()
         for key,item in self.ppa_dct.items():
             # print('jeej')
             plt.plot(item['score'],'b-',linewidth=0.1)
             plt.ylabel('score (connections.length)')
-            plt.xlabel('iterations')
+            plt.xlabel('function evaluations')
         plt.savefig('ppa_plot.png')
-        plt.gcf()
 
 
     def rd_data(self):
@@ -131,19 +154,21 @@ class algo_plots:
         return rd_dct
 
     def rd_plot(self):
-
+        plt.clf()
+        #plt.figure(figsize=(10, 5))
         for key,item in self.rd_dct.items():
             print('jeej')
             density = gaussian_kde(item['score'])
-            xs = np.linspace(40, 90, 1000)
+            xs = np.linspace(40, 90, 10000)
             plt.plot(xs, density(xs), label=item['netlist'])
             #plt.plot(item['score'],'b-',linewidth=0.1)
-            plt.ylabel('density')
-            plt.xlabel('score (connections.length)')
-            plt.title('density of random configuration scores')
-            plt.legend()
+            break
+        plt.ylabel('density')
+        plt.xlabel('score (connections.length)')
+        plt.title('score density in the search space')
+        plt.legend()
         plt.savefig('rd_plot.png')
-        plt.gcf()
+        print('plotted random')
 
 
 algo_plots()
