@@ -3,28 +3,18 @@
 ## dingen maken
 
 
- ## doen ##
-1) duplicaat code wegwerken
-2) meer comments
-3) grids maken: 80 100 120
-4) proporties netlists vergelijkbaar met verhoudingen [hier](http://heuristieken.nl/wiki/index.php?title=Chips_%26_Circuits)
-5) scoring functie zoeken
+## doen ##
+- meer comments
+- proporties netlists vergelijkbaar met verhoudingen [hier](http://heuristieken.nl/wiki/index.php?title=Chips_%26_Circuits)
 
 
- ## zoektermen ##
+## zoektermen ##
  - VLSI optimization
 
 
- ## Papers/naslagwerk ##
+## Papers/naslagwerk ##
  - synthesis and optimization of digital circuits
  - a survey of optimization
- - http://www.cleveralgorithms.com/nature-inspired/index.html
-
-
- ## conferenties/gaafheid
- - https://meta2018.sciencesconf.org/
- - http://www.airoconference.it/ods2018/topics
-
 
 ## visualiseren
  - circuit is nu printbaar binnen terminal maar mooier = beter.
@@ -35,7 +25,14 @@
 linter style modus aggressive (eerst kopie)
  -  pycodestyle
 
- ## todo 180507
+
+## conferenties/gaafheid
+ - https://meta2018.sciencesconf.org/
+ - http://www.airoconference.it/ods2018/topics
+
+
+
+## todo 180507
 - Update HC in case of not fully connected; always use total distance as comparison parameter.
 - Visualize behavior of PPA algorithm -> mean and max value for every population.
 - Distance between max and mean gives information about population. (Same goes for distribution (standard deviation, etc))
@@ -47,6 +44,6 @@ If difference between max and mean stays big or increases it shows that the fitn
     - result evaluation; every time distance + n connections is checked for a solution
     - You can run HC first till it flatlines or takes too long and use iterations as indicator for PPA runtime or first run PPA and try to indicate the number of generations needed. Estimating the number of iterations/generations needed by plotting algorithm progress gives the best indication. Used algorithms are not deterministic so make sure you run it a few times. Since PPA is more important make sure you don't cut it of too fast.
     https://www.researchgate.net/post/What_is_the_maximum_number_of_generation_size_iteration_in_meta-heuristic_algorithms_such_as_GA
-    -> fixed number of iterations for HC is not mandatory, stopping HC if no improvement is found within a certain number of iterations is also allowed, this is more complicated for PPA so just do some test runs.
+        - > fixed number of iterations for HC is not mandatory, stopping HC if no improvement is found within a certain number of iterations is also allowed, this is more complicated for PPA so just do some test runs.
     - To make sure you're in time for Essex don't do this for all generated netlists but pick a few easy ones or run all and pick the ones with the best results. This is about presenting your first findings so you don't need an extensive number of netlists to present your first assumptions.
-    
+

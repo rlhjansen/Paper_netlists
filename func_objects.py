@@ -171,7 +171,7 @@ class SA:
                 self.check_anneal(cur_conn, cur_ord, cur_len, i)
 
         self.G.solve_order(self.sol_ord)
-        print_final_state(self.G, self.sol_ord, self.sol_len, \
+        print_final_state(self.G, self.sol_ord, self.sol_len,
                           self.sol_conn, self.tot_nets)
 
     ################################################################
@@ -444,7 +444,8 @@ class PPA:
         self.pop_cut = pop_cut
         self.max_runners = max_runners
 
-        G, initial_pop, all_nets = SPPA(gridfile, subdir, netfile, pop_cut, ref_pop=ref_pop)
+        G, initial_pop, all_nets = SPPA(gridfile, subdir, netfile, pop_cut,
+                                        ref_pop=ref_pop)
         self.pop = initial_pop
         self.tot_nets = all_nets
         self.G = G
@@ -480,16 +481,15 @@ class PPA:
             value = ceil(self.max_runners*mrank*random())
             runners.append(value)
 
-
-        swaplist = []
-        for i, rcount in enumerate(runners):
+        swap_list = []
+        for i, runner_count in enumerate(runners):
             cur_swaps = []
-            for _ in range(rcount):
+            for _ in range(runner_count):
                 distance = (1-mapped_ranks[i])*random()*self.max_runners
                 cur_swaps.append(ceil(distance))
                 new_ords = swap_up_to_x_elems(orders[i], ceil(distance))
                 newpop.append(new_ords[0])
-            swaplist.append(cur_swaps)
+            swap_list.append(cur_swaps)
         return newpop
 
     def combine_old_new(self, nscores, norderlist):
@@ -543,10 +543,10 @@ class PPA:
         tot = self.combine_old_new(scores, orderlist)
         plant_scores = tot[0][:self.pop_cut]
         plant_orders = tot[1][:self.pop_cut]
+        best_con, best_len = split_score(plant_scores[0])
 
         self.last_pop = tot[1][:self.elitism]
         self.last_scores = tuple(tot[0][:self.elitism])
-
 
         zMax = max(plant_scores)
         zMin = min(plant_scores)
@@ -557,7 +557,6 @@ class PPA:
 
         self.pop = self.fitnesses_to_newpop(fitnesses, plant_orders)
 
-        best_con, best_len = split_score(plant_scores[0])
         self.sol_ord = plant_orders[0]
         self.sol_conn = best_con
         self.sol_len = best_len
@@ -756,8 +755,6 @@ class APPA:
             self.last_scores = tuple([combine_score(*self.G.solve_order(reversed(cur_ord), reset=True)) for cur_ord in self.last_pop])
         else:
             self.last_scores = tuple([combine_score(*self.G.solve_order(cur_ord, reset=True)) for cur_ord in self.last_pop])
-
-
 
     def run_algorithm(self):
         """main loop, generates evaluates & saves "plants" per generation.

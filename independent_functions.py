@@ -11,21 +11,21 @@ from math import sqrt, floor
 # https://matplotlib.org/mpl_toolkits/mplot3d/tutorial.html
 
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 
+###############################################################################
+#  Plotting -circuit                                                          #
+###############################################################################
 
-###### Plotting ########################
-# circuit
-########################################
 shapes_string = "- -- -. :"
 SHAPES = shapes_string.split(' ')
 COLOURS = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
 
 col_len = len(COLOURS)
 
+
 def get_markers(n):
-    return [SHAPES[i%4] + COLOURS[i%col_len] for i in range(n)]
+    return [SHAPES[i % 4] + COLOURS[i % col_len] for i in range(n)]
 
 
 def paths_to_plotlines(paths):
@@ -104,8 +104,8 @@ def plot_circuit(paths, order, gates, gate_tags):
 
 
 def create_plot_title(original_len, placed):
-    return "netlist_placement for " + str(placed) +" out of" + str(original_len) + \
-           "nets"
+    return "netlist_placement for " + str(placed) +" out of" + \
+           str(original_len) + "nets"
 
 
 def split_gates(gates):
@@ -118,9 +118,9 @@ def split_gates(gates):
     return xgs, ygs, zgs
 
 
-###### Plotting ########################
-# results
-########################################
+###############################################################################
+#  Plotting - results                                                         #
+###############################################################################
 
 def file_vars(fname):
     connections = []
@@ -134,6 +134,7 @@ def file_vars(fname):
             lengths.append(line[1])
     return connections, lengths
 
+
 def plot_values(series, labels):
     fig = plt.figure()
     plot_len = len(series[0])
@@ -143,9 +144,11 @@ def plot_values(series, labels):
     #Todo make appropraite per results
     fig.savefig(",".join(labels)+".png")
 
+###############################################################################
+# Sorting                                                                     #
+###############################################################################
 
 
-###### Sorting ########################
 def swap_two_elems(net_path, prev_swap_ind=-1):
     """ swaps two random elements of a list in place
 
@@ -169,6 +172,7 @@ def swap_two_elems(net_path, prev_swap_ind=-1):
     npath[i1], npath[i2] = npath[i2], npath[i1]
     return npath, i2
 
+
 def swap_two_inplace(net_path):
     """ swaps two random elements of a list in place
 
@@ -183,6 +187,7 @@ def swap_two_inplace(net_path):
     net_path[i1], net_path[i2] = net_path[i2], net_path[i1]
     return net_path
 
+
 def swap_up_to_x_elems(net_path, x):
     """
 
@@ -191,7 +196,6 @@ def swap_up_to_x_elems(net_path, x):
     :return: list of netlist orders with [2, 3, 4, ... 2+x] elements swapped each
     """
     new_paths = []
-    # print("", net_path)
     curnew = net_path[:]
     new_order, swapped_with = swap_two_elems(curnew, prev_swap_ind=-1)
     new_paths.append(new_order)
@@ -232,19 +236,54 @@ def quicksort(arr):
         more = quicksort(more)
     return less + pivotList + more
 
+
 def combine_score(connections, length):
+    """ combines cnnections & length components into a single score
+
+    ex: 45 connections, 400  wire length --> 45.9600
+        46 connections, 1680 wire length --> 46.8320
+
+    :param connections: number of connected nets
+    :param length:
+    :return:
+    """
     frac_part = float(10000-length)/10000.
     return float(connections)+frac_part
 
+
 def split_score(combination):
-    print("combination", combination)
+    """ splits score into connections & length component
+
+    ex: 45.9600 --> 45 connections, 400 wire length
+        46.832  --> 46 connections, 1680 wire length
+
+    :param combination:  45.9600 from above
+    :return: (connected_nets, total_netlength)
+    """
     connections = floor(combination)
-    print("connections", connections)
     length = -10000. * (combination - float(connections)) + 10000
-    print("length", length)
     return connections, length
 
-###### Filename Generating ############
+
+def order_from_float(float_indeces, nets):
+    """ converts list of float space to index space for net order for
+
+    a more accurate ppa implementation
+
+    :param float_indeces: floating point numbers for index representation
+    :param nets: nets in a pre-defined order
+    :return: net order according to floating point index
+    """
+    zipped = zip(float_indeces, nets)
+    ordered = sorted(zipped, key=lambda x: x[0])
+    return [combined[1] for combined in zip(*ordered)]
+
+
+###############################################################################
+#  Filename Generating                                                        #
+###############################################################################
+
+
 def create_fpath(subdir, outf):
     print(outf)
     print(subdir)
@@ -260,9 +299,11 @@ def create_fpath(subdir, outf):
 def get_name_netfile(gridnum, listnum):
     return "C" + str(gridnum) + "_netlist_" + str(listnum) + ".csv"
 
+
 def get_name_circuitfile(gridnum, x, y, tot_gates):
     return "Gateplatform_" + str(gridnum) + "_" + str(x) + "x" + str(
         y) + "g" + str(tot_gates) + ".csv"
+
 
 def create_data_directory(main_subdir, gridnum, x, y, tot_gates, listnum, additions, ask=True):
     gridfn = get_name_circuitfile(gridnum, x, y, tot_gates)
@@ -299,8 +340,10 @@ def create_data_directory(main_subdir, gridnum, x, y, tot_gates, listnum, additi
                 ans = input("Continuing will append pre-recorded data\nContinue? (Y/n)")
     return os.path.join(dir_check_path, 'data ' + '_'.join(additions) + '.tsv')
 
+
 def get_subdirs(a_dir):
     return [name for name in os.listdir(a_dir)]
+
 
 def get_res_subdirs(a_dir):
     forbidden = ['.py', 'txt', 'lsx', '.md', 'png']
@@ -325,7 +368,6 @@ def gates_from_lol(lol):
     return gate_coords, gates
 
 
-
 def read_grid(fpath):
     """
     reads a grid configuration fom the file at the file path
@@ -339,7 +381,6 @@ def read_grid(fpath):
     for i in range(len(base)):
         otherbase.append(base[:][i])
     return base
-
 
 
 def prodsum(iterable):
@@ -383,10 +424,11 @@ def count_to_pos(count, params):
 
 
 def params_inp(params):
-    """
-    :param - params: parameters of a grid to be created
-    :yield: node for a grid with size of parameters.
-    params = (10,10) yields (0, 0), (1, 0), ..., (9,9)
+    """ return all tuples for a grid of certain size,
+
+    params = (10,10) creates tuples for positions (0, 0), (1, 0), ..., (9,9)
+
+    :return: tuple for every node in a grid with params
     """
     base = [0]*len(params)
     count = 0
@@ -410,10 +452,13 @@ def neighbours(coords):
     return tuple(rl)
 
 
+###############################################################################
+#  funcs for printing                                                         #
+###############################################################################
 
-###### funcs for printing ############
-def transform_print(val, Advanced_heuristics):
-    if Advanced_heuristics:
+
+def transform_print(val, advanced_heuristics):
+    if advanced_heuristics:
         if val == '0':
             return '___'
         elif val[0] == 'n':
@@ -448,26 +493,33 @@ def print_final_state(grid, best_order, best_len, \
     print("Final Length =\t", best_len)
     print("All connected =\t", nets_solved, "/", tot_nets)
 
-def printbar(n):
-    print('#'*n)
-    print('#'*n)
-
 
 def write_connections_length_ord(filename, con_len_list):
-    print(con_len_list)
-    w_str = '\n'.join(['\t'.join([','.join([str(l) for l in m]) for m in n]) for n in con_len_list])
+    w_str = '\n'.join(['\t'.join([','.join([str(l) for l in m]) for m in n])
+                       for n in con_len_list])
     with open(filename, 'a') as f:
         f.write(w_str)
         f.write('\n')
 
+
 def writebar(filename, *extra):
+    """ appends a breakline to a file, representing the end of a generation
+
+    :param filename: file to append to
+    :param extra: extra information at the breakline
+    """
     with open(filename, 'a') as f:
         f.write('#### ' + ' '.join([*extra]) + '\n')
 
 
-
 def write_connections_length(filename, con_len_list):
-    print(con_len_list)
+    """ appends result data to file, first connections then total length,
+
+    separated by a comma (',')
+
+    :param filename:
+    :param con_len_list:
+    """
     w_str = '\n'.join(['\t'.join([','.join([str(l) for l in m]) for m in n[:-1]]) for n in con_len_list])
     with open(filename, 'a') as f:
         f.write(w_str)

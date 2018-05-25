@@ -1,6 +1,6 @@
 
 import os
-from random import randint, shuffle
+from random import randint, shuffle, random
 import queue as Q
 
 from independent_functions import neighbours,transform_print, params_inp, manhattan, create_fpath, swap_up_to_x_elems, read_grid, gates_from_lol
@@ -172,7 +172,6 @@ class Grid:
             roomleft2 = self.griddict.get(self.gate_coords.get(g2)).has_room()
             no_room_left = not (roomleft1 and roomleft2)
             while common or no_room_left:
-                # print("net", i, "common : no_room_left", common, ":", no_room_left)
                 g1, g2 = AG[randint(0, GN)], AG[randint(0, GN)]
                 g1nets = self.gate_net.get(g1)
                 g2nets = self.gate_net.get(g2)
@@ -191,14 +190,12 @@ class Grid:
     def get_net_ordered_manhattan(self):
         values = list(self.net_gate.values())
         nets = list(self.net_gate.keys())
-        manh_vals = [manhattan(self.gate_coords[values[i][0]], self.gate_coords[values[i][1]]) for i in range(len(nets))]
+        manh_vals = [manhattan(self.gate_coords[values[i][0]],
+                               self.gate_coords[values[i][1]]) for i in range(len(nets))]
         to_sort = [(manh_vals[i], nets[i]) for i in range(len(nets))]
-        print(manh_vals)
         s = sorted(to_sort)
         s_nets = [n[1] for n in s]
         s_manh = [n[0] for n in s]
-        print(s_nets)
-        print(s_manh)
         return s_nets
 
 
@@ -222,11 +219,8 @@ class Grid:
             self.add_net(g1, g2, net)
 
     def print_nets(self):
-        print("printing nets...")
-        _list = []
         for key in self.net_gate.keys():
-            _list.append([key, self.net_gate[key]])
-        print(_list)
+            print([key, self.net_gate[key]])
 
 
     ###########################
@@ -236,7 +230,6 @@ class Grid:
         """
         remove the netlist from class
         """
-        print("setting null")
         for key in self.coord_gate.keys():
             self.griddict[key].remove_out_nets()
         for key in self.gate_net.keys():
@@ -305,7 +298,6 @@ class Grid:
         manh_d = manhattan(path[-1], end_loc)
         q.put((manh_d + steps, steps, path),)
         visited = set()
-        # print("net =", net + "*", start_loc, end_loc)
         count = 0
         while not q.empty():
             count += 1
@@ -318,20 +310,18 @@ class Grid:
                 new_coord = n.get_coord()
                 manh_d = manhattan(new_coord, end_loc)
                 if manh_d == 0:
-                    # print("A_star end, found path:", path, "\nFound in", steps, "steps")
                     return path + (new_coord,), steps + 1
                 if new_coord in visited:
                     continue
                 else:
                     q.put((manh_d + steps, steps + 1, path + (new_coord,)),)
                     visited.add(new_coord)
-        # print("A_star end, nothing found")
         return False, False  # No Path found
 
 
 
 
-    def solve_order(self, net_order):
+    def solve_order(self, net_order, _print=False, reset=True):
         tot_length = 0
         solved = 0
         nets_solved = []
@@ -346,6 +336,10 @@ class Grid:
                 tot_length += length
                 nets_solved.append(net)
         print(solved, tot_length, nets_solved)
+        if _print:
+            print(self)
+        if reset:
+            self.reset_nets()
         return solved, tot_length
 
     def get_solution_placement(self, net_order):
@@ -357,7 +351,6 @@ class Grid:
                 Err = self.place(net, path, length)
             else:
                 paths.append( ((),))
-            #print(paths)
         self.reset_nets()
         return paths
 
@@ -377,7 +370,12 @@ class Grid:
         self.reset_nets()
         return self.solve_order(order), [i[1:] for i in order]
 
-###### Setup functions #########
+
+###############################################################################
+#  Setup functions                                                            #
+###############################################################################
+
+
 def SXHC(gridfile, subdir, netfile, consecutive_swaps):
     """
 
@@ -396,8 +394,7 @@ def SXHC(gridfile, subdir, netfile, consecutive_swaps):
     return G, cur_orders, tot_nets
 
 
-
-def SPPA(gridfile, subdir, netfile, batchsize):
+def SPPA(gridfile, subdir, netfile, batchsize, ref_pop=None):
     """
     :param gridfile: filename of circuit
     :param subdir: subdirectory in which files are located
@@ -409,7 +406,31 @@ def SPPA(gridfile, subdir, netfile, batchsize):
     gridfile = create_fpath(subdir, gridfile)
     G = file_to_grid(gridfile, None)
     G.read_nets(subdir, netfile)
-    first_batch = [G.get_random_net_order() for _ in range(batchsize)]
+    if ref_pop:
+        first_batch = ref_pop
+    else:
+        first_batch = [G.get_random_net_order() for _ in range(batchsize)]
+    tot_nets = len(first_batch[0])
+    return G, first_batch, tot_nets
+
+
+def S_FI_PPA(gridfile, subdir, netfile, batchsize, ref_pop=None):
+    """
+    :param gridfile: filename of circuit
+    :param subdir: subdirectory in which files are located
+    :param netfile: filename of circuit
+    :param batchsize: initial population size
+    :param height: maximum allowed height for solution finding
+    :return: starting parameters for the solver
+    """
+    gridfile = create_fpath(subdir, gridfile)
+    G = file_to_grid(gridfile, None)
+    G.read_nets(subdir, netfile)
+    netlist_len = len(G.get_random_net_order())
+    if ref_pop:
+        first_batch = ref_pop
+    else:
+        first_batch = [[random() for _ in range(netlist_len)] for _ in range(batchsize)]
     tot_nets = len(first_batch[0])
     return G, first_batch, tot_nets
 
