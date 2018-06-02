@@ -142,6 +142,7 @@ class algo_plots:
         maxlist = [max(item['score']) for key, item in ppa_dct.items()]
         med = median(maxlist)
         mmax = max(maxlist)
+        print('lukt het?', med, maxlist)
         ind_med = maxlist.index(med)
         ind_max = maxlist.index(mmax)
         ppa_dct['median'] = ppa_dct[ind_med]
