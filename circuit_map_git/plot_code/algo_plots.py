@@ -1,8 +1,9 @@
-import csv, os, copy
+import csv, os, copy, sys
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 from statistics import median
 import numpy as np
+
 
 def combine_score(connections, length):
     frac_part = float(10000-length)/10000.
@@ -51,6 +52,7 @@ class algo_plots:
         worst, wi = 100, None
         s_endpoints = sorted([result_dict[i]['score'][-1] for i in range(len(result_dict))])
         median, mi = s_endpoints[int(len(s_endpoints)/2)], None
+
         for i in range(len(result_dict)):
             if result_dict[i]['score'][-1] < worst:
                 worst, wi = result_dict[i]['score'][-1], i
@@ -144,6 +146,7 @@ class algo_plots:
         ind_max = maxlist.index(mmax)
         ppa_dct['median'] = ppa_dct[ind_med]
         ppa_dct['best'] = ppa_dct[ind_max]
+        print('kom ik hier',ind_med, ind_max)
         return ppa_dct
 
     def ppa_plot(self):
