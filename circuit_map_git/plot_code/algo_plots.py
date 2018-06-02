@@ -1,6 +1,7 @@
-import csv, matplotlib,os, copy
+import csv, os, copy
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
+from statistics import median
 import numpy as np
 
 def combine_score(connections, length):
@@ -17,9 +18,10 @@ class algo_plots:
         self.hc_dct = self.hc_data()
         self.ppa_dct = self.ppa_data()
         self.rd_dct = self.rd_data()
-        self.hc_plot(ppa_compare=True, all=False, best=True, worst=True, median=True)
+        self.hc_plot(ppa_compare=True, ppa_median=True, ppa_best=True, all=False, best=True, worst=True, median=True)
         #self.ppa_plot()
-        #self.rd_plot()
+        self.rd_plot(compare_ppa=False)
+        self.get_best_ppa_iterdict()
 
     def hc_data(self):
 
@@ -61,37 +63,52 @@ class algo_plots:
         self.medianhc = mi
         return result_dict
 
-    def hc_plot(self, all=True, ppa_compare=False, best=False, worst=False, median=False):
+    def get_best_ppa_iterdict(self, compare_median=True):
+        for key, item in self.ppa_dct.items():
+            print(key, max(item['score']))
+        if compare_median:
+            return [median([max(item['score']) for key, item in self.ppa_dct.items()])]
+        else:
+            return [max(item['score']) for key, item in self.ppa_dct.items()]
+
+
+
+    def hc_plot(self, all=True, ppa_compare=False, ppa_median=False, ppa_best=True, best=False, worst=False, median=False):
         plt.clf()
         plt.figure(figsize=(10, 5))
-        plt.ylabel('score (connections.length)')
+        plt.ylabel('score')
         plt.xlabel('function evaluations')
-        plt.title('Algorithm comparison of hillclimber and plant propagation for netlist with 100 nets')
+        #plt.title('Algorithm comparison of hillclimber and plant propagation for netlist with 100 nets')
         if all:
             for key,item in self.hc_dct.items():
                 #print(key)
                 plt.plot(item['iter'],item['score'],label='hc{}'.format(key))
         if ppa_compare:
-            for key,item in self.ppa_dct.items():
-                plt.plot(item['sort'],'b-', linewidth=0.5,label='sample ppa')
-                break
+            if ppa_best:
+                plt.plot(self.ppa_dct['best']['score'], 'r-', linewidth=0.5,label='best ppa', color="#feb24c")
+            if ppa_median:
+                plt.plot(self.ppa_dct['median']['score'], 'g-',linewidth=0.5,
+                         label='median ppa', color="#9ebcda")
+            if False:
+                for key,item in self.ppa_dct.items():
+                    plt.plot(item['sort'],'b-', linewidth=1.,label='sample ppa')
+                    break
         if best:
             bi = self.besthc
-            plt.plot(self.hc_dct[bi]['iter'], self.hc_dct[bi]['score'], linewidth=1.2, label='best hc')
+            plt.plot(self.hc_dct[bi]['iter'], self.hc_dct[bi]['score'], linewidth=1.2, color="#de2d26", label='best hc')
         if worst:
             wi = self.worsthc
             plt.plot(self.hc_dct[wi]['iter'], self.hc_dct[wi]['score'], linewidth=1.2, label='worst hc')
         if median:
             mi = self.medianhc
-            plt.plot(self.hc_dct[mi]['iter'], self.hc_dct[mi]['score'], linewidth=1.2, label='median hc')
+            plt.plot(self.hc_dct[mi]['iter'], self.hc_dct[mi]['score'], linewidth=1.2, color="#756bb1",label='median hc')
         plt.legend()
-        plt.savefig('hc_plot3.png')
+        plt.savefig('hc_plot_compare.png')
 
     def ppa_data(self):
 
         ppa_dct = {}
         ppa_files = os.listdir(self.ppa_dir)
-
         for i, file in enumerate(ppa_files):
             ppa_name = (file.strip('.tsv').split('_')[-1])
             ppa_dct[i] = {}
@@ -116,14 +133,25 @@ class algo_plots:
                         temp_lst.append(cur_score)
                 # print(sort_lst)
                 ppa_dct[i]['score'] = score_lst
+                ppa_dct[i]['max'] = max(score_lst)
                 ppa_dct[i]['gen'] = gen_lst
                 ppa_dct[i]['sort'] = sort_lst
+
+        maxlist = [max(item['score']) for key, item in ppa_dct.items()]
+        med = median(maxlist)
+        mmax = max(maxlist)
+        ind_med = maxlist.index(med)
+        ind_max = maxlist.index(mmax)
+        ppa_dct['median'] = ppa_dct[ind_med]
+        ppa_dct['best'] = ppa_dct[ind_max]
         return ppa_dct
 
     def ppa_plot(self):
         plt.clf()
         for key,item in self.ppa_dct.items():
             # print('jeej')
+            if key == 'best' or key == 'median':
+                continue
             plt.plot(item['score'],'b-',linewidth=0.1)
             plt.ylabel('score (connections.length)')
             plt.xlabel('function evaluations')
@@ -153,19 +181,24 @@ class algo_plots:
                 rd_dct[i]['netlist'] = netlists[i]
         return rd_dct
 
-    def rd_plot(self):
+    def rd_plot(self, compare_ppa=None, median_compare=True):
         plt.clf()
         #plt.figure(figsize=(10, 5))
         for key,item in self.rd_dct.items():
             print('jeej')
             density = gaussian_kde(item['score'])
             xs = np.linspace(40, 90, 10000)
-            plt.plot(xs, density(xs), label=item['netlist'])
+            plt.plot(xs, density(xs), label='random samples')
             #plt.plot(item['score'],'b-',linewidth=0.1)
             break
-        plt.ylabel('density')
-        plt.xlabel('score (connections.length)')
-        plt.title('score density in the search space')
+        if compare_ppa:
+            res_ppa = self.get_best_ppa_iterdict(compare_median=median_compare)
+            for inst in res_ppa:
+                plt.axvline(x=inst, color='g', linestyle=':', label='median ppa')
+
+        plt.ylabel('density of 10.000 RS')
+        plt.xlabel('score')
+        #plt.title('score density in the search space, 10E4')
         plt.legend()
         plt.savefig('rd_plot.png')
         print('plotted random')
