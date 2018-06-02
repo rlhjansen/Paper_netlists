@@ -16,14 +16,14 @@ from independent_functions import \
     print_final_state, \
     quicksort, \
     split_score, \
-    swap_up_to_x_elems, \
+    swap_two_X_times, \
     write_connections_length, \
     write_connections_length_ord, \
     writebar
 
 class HC:
     def __init__(self, subdir, grid_num, net_num, x, y, tot_gates,
-                 consec_swaps, iterations, additions, chance_on_same=.5, ask=True):
+                 swaps, iterations, additions, chance_on_same=.5, ask=True):
         """Initializes the HillClimber solver
 
         :param subdir: Subdirectory name where files are located
@@ -39,7 +39,7 @@ class HC:
         """
         net_file = get_name_netfile(grid_num, net_num)
         grid_file = get_name_circuitfile(grid_num, x, y, tot_gates)
-        G, cur_ords, tot_nets = SXHC(grid_file, subdir, net_file, consec_swaps)
+        G, cur_ords, tot_nets = SXHC(grid_file, subdir, net_file, swaps)
         self.name = "HC"
         self.gn = grid_num
         self.nn = net_num
@@ -49,11 +49,11 @@ class HC:
         self.sol_len = 5000
         self.sol_ord = cur_ords[0]
         self.tot_nets = tot_nets
-        self.swaps = consec_swaps
+        self.swaps = swaps
         self.sol_conn = 0
         self.all_connected = False
         self.chance = chance_on_same
-        additions += [str(consec_swaps) + "swaps",
+        additions += [str(swaps) + "swaps",
                       str(iterations) + "iterations"]
         self.savefile = create_data_directory(subdir, grid_num, x, y, tot_gates, net_num, additions, ask=ask)
 
@@ -95,7 +95,7 @@ class HC:
         for i in range(self.iterations):
             print_start_iter(self.gn, self.nn, self.name, i)
             if self.sol_ord:
-                cur_ords = swap_up_to_x_elems(self.sol_ord, self.swaps)
+                cur_ords = swap_two_X_times(self.sol_ord, 1) #HARD CODED
 
             data_lco = []  # conn, len, order
             for i, cur_ord in enumerate(cur_ords):
@@ -160,7 +160,7 @@ class SA:
         for i in range(self.iterations):
             print_start_iter(1, 3, self.name, self.swaps, i)
             if self.sol_ord:
-                cur_ords = swap_up_to_x_elems(self.sol_ord, self.swaps)
+                cur_ords = swap_two_X_times(self.sol_ord, self.swaps)
 
             data_lco = []  # conn, len, order
             for j, cur_ord in enumerate(cur_ords):
@@ -463,6 +463,10 @@ class PPA:
     def fitnesses_to_newpop(self, scores, orders):
         """ runners & distances from original paper by Salhi & Fraga
 
+        original mapping fitness:
+            0.5 * (tanh(4*score - 2) + 1)
+
+
         original distance function:
             2*(1-mrank)*(random()-0.5)
             --> maps greater ranks closer to 0 and randomizes +/-
@@ -487,8 +491,8 @@ class PPA:
             for _ in range(runner_count):
                 distance = (1-mapped_ranks[i])*random()*self.max_runners
                 cur_swaps.append(ceil(distance))
-                new_ords = swap_up_to_x_elems(orders[i], ceil(distance))
-                newpop.append(new_ords[0])
+                new_ord = swap_two_X_times(orders[i], ceil(distance))
+                newpop.append(new_ord)
             swap_list.append(cur_swaps)
         return newpop
 
@@ -518,8 +522,8 @@ class PPA:
         *   fitness/ranking function should be the following type:
 
             original:
-            f(z) = (zMax - z)/(zMax-zMin), with Zmax & min being objective
-            maximum & minimum functions
+            f(z) = (zMax - z)/(zMax-zMin), with min being objective
+
             The the goal of the function is to minimize z
 
             Implemented:
@@ -527,6 +531,8 @@ class PPA:
             the score z made of two parts:
               - An integer part: the connections made
               - A decimal part: (10000-length)/10000
+
+            better (in our case, higher) values are closer to 1.
 
             The the goal of the function is to maximize z which should yield
             similar goal results
@@ -590,212 +596,6 @@ class PPA:
               self.sol_len)
 
 
-class APPA:
-    """APPA is the Adversarial plant propagation Plant Propagation solver class.
-
-    for info on PPA check the original paper by Salhi and Frage
-    This is one of multiple experimental algorithms created for this use case.
-    """
-    def __init__(self, subdir, grid_num, net_num, x, y, g, max_generations, additions=[], elitism=0, pop_cut=20, max_runners=4, alternate=2, ref_pop=None, ask=True):
-        """
-
-        :param subdir: Subdirectory name where files are located
-        :param grid_num: Assigned number of circuit
-        :param net_num: Filename of the netlist
-        :param x,y,g: attributs of grid for filename generation
-        :param max_generations: Maximum amount of generations
-
-        :param elitism: amount best plants being added to the next generation
-            0 means all are added
-        :param pop_cut: X best of a generation who will have offspring
-        :param max_runners: maximum amount of child solution sets produced by
-            one parent.
-        """
-        gridfile = get_name_circuitfile(grid_num, x, y, g)
-        netfile = get_name_netfile(grid_num, net_num)
-        self.gn = grid_num
-        self.nn = net_num
-        self.elitism = elitism
-        self.gens = max_generations
-        self.pop_cut = pop_cut
-        self.max_runners = max_runners
-        G, initial_pop, all_nets = SPPA(gridfile, subdir, netfile, pop_cut, ref_pop=ref_pop)
-        self.pop = initial_pop
-        self.tot_nets = all_nets
-        self.G = G
-        self.last_pop = tuple((),)
-        self.last_scores = tuple((),)
-        self.alternate = alternate
-        FUNC_PARAMS = ["ADVERSERIAL PPA",
-                       "pop" + str(pop_cut),
-                       "max_runners" + str(max_runners),
-                       "elitism" + str(elitism),
-                       "generations" + str(max_generations),
-                       "alternate" + str(alternate)]
-        FUNC_PARAMS = additions+FUNC_PARAMS
-        self.savefile = create_data_directory(subdir, grid_num, x, y,
-                                              g, net_num, FUNC_PARAMS, ask=ask)
-
-    def fitnesses_to_newpop(self, scores, orders):
-        """ runners & distances from original paper by Salhi & Fraga
-
-        original distance function:
-            2*(1-mrank)*(random()-0.5)
-            --> maps greater ranks closer to 0 and randomizes +/-
-
-        applied distance function:
-            (1-mrank)*random()
-            -->  maps greater ranks closer to 0
-
-        :param orders: best placement orders of last generaion
-        :returns: new population plants to be considered
-        """
-        newpop = []
-        mapped_ranks = [0.5 * (tanh(4*score - 2) + 1) for score in scores]
-        runners = []
-        for mrank in mapped_ranks:
-            value = ceil(self.max_runners*mrank*random())
-            runners.append(value)
-        swaplist = []
-        for i, rcount in enumerate(runners):
-            cur_swaps = []
-            for _ in range(rcount):
-                distance = (1-mapped_ranks[i])*random()*self.max_runners
-                cur_swaps.append(ceil(distance))
-                new_ords = swap_up_to_x_elems(orders[i], ceil(distance))
-                newpop.append(new_ords[0])
-            swaplist.append(cur_swaps)
-        return newpop
-
-    def combine_old_new(self, nscores, norderlist):
-        """ Combines new & old results, sorts them and returns them
-
-        :param nscores: scores from the latest
-        :param norderlist: orders from the latest generation
-
-        :variable plant: #orders, scores (maximizing)
-
-        :return: newest values, combined & sorted with the best (see elitism)
-            of last generation.
-        """
-        scores = self.last_scores + nscores
-        orders = self.last_pop + norderlist
-        zipped = zip(scores, orders)
-        new_ranking = sorted(zipped, key=lambda x: -x[0])
-        return [plant for plant in zip(*new_ranking)] #orders, scores (maximizing)
-
-    def populate(self, qslist, sel_worst=True):
-        """ Sets a new population for the following iteration.
-
-        :param qslist: elements are tuple(nets solved, solution length,
-                                          net order)
-        :variable ranks:
-        *   fitness/ranking function should be the following type:
-
-            original:
-            f(z) = (zMax - z)/(zMax-zMin), with Zmax & min being objective
-            maximum & minimum functions
-            The the goal of the function is to minimize z
-
-            Implemented:
-            f(z) = (z - zMin)/(zMax-zMin)
-            the score z made of two parts:
-              - An integer part: the connections made
-              - A decimal part: (10000-length)/10000
-
-            The the goal of the function is to maximize z which should yield
-            similar goal results
-
-        *  Elitism: amount of the most recent selection that is retained
-            in the new generation
-
-        * #TODO division by zero fitness rework
-        """
-
-        qslen = len(qslist)
-        scores = tuple([combine_score(qslist[i][0], qslist[i][1]) for i in range(qslen)])
-        orderlist = tuple([qslist[i][2] for i in range(qslen)])
-
-        tot = self.combine_old_new(scores, orderlist)
-        if not sel_worst:
-            plant_scores = tot[0][:self.pop_cut]
-            plant_orders = tot[1][:self.pop_cut]
-            self.last_pop = plant_orders[:self.elitism]
-            self.last_scores = tuple(plant_scores[:self.elitism])
-        else:
-            plant_scores = tot[0][-self.pop_cut:]
-            plant_orders = tot[1][-self.pop_cut:]
-            self.last_pop = plant_orders[-self.elitism:]
-            self.last_scores = tuple(plant_scores[self.elitism:])
-
-
-        zMax = max(plant_scores)
-        zMin = min(plant_scores)
-        if zMax == zMin:
-            fitnesses = [0 for score in
-                         plant_scores]
-        else:
-            if sel_worst:
-                fitnesses = [(zMax-score)/(zMax-zMin) for score in plant_scores]
-
-            elif not sel_worst:
-                fitnesses = [(score-zMin)/(zMax-zMin) for score in plant_scores]
-
-
-        self.pop = self.fitnesses_to_newpop(fitnesses, plant_orders)
-
-        best_con, best_len = split_score(plant_scores[0])
-        self.sol_ord = plant_orders[0]
-        self.sol_conn = best_con
-        self.sol_len = best_len
-
-    def flip_selection(self, worst):
-        print("flipping")
-        if worst:
-            self.last_scores = tuple([combine_score(*self.G.solve_order(reversed(cur_ord), reset=True)) for cur_ord in self.last_pop])
-        else:
-            self.last_scores = tuple([combine_score(*self.G.solve_order(cur_ord, reset=True)) for cur_ord in self.last_pop])
-
-    def run_algorithm(self):
-        """main loop, generates evaluates & saves "plants" per generation.
-
-        """
-        worst = False
-        switch_counter = self.alternate
-        for i in range(self.gens):
-            print_start_iter(self.gn, self.nn, "Adversarial Plant Propagation", i+1)
-            data_clo = []  # conn, len, order
-            print('look for worst =', worst)
-            for j, cur_ord in enumerate(self.pop):
-                if worst:
-                    satisfies = self.G.solve_order(reversed(cur_ord))
-                else:
-                    satisfies = self.G.solve_order(cur_ord)
-                cur_conn, cur_len = satisfies
-                data_clo.append((cur_conn, cur_len, tuple(cur_ord)))
-                self.G.reset_nets()
-                write_connections_length(self.savefile, [
-                    [(cur_conn, cur_len), cur_ord]])
-            writebar(self.savefile, "generation", str(i))
-            qslist = quicksort(data_clo)
-            self.sol_len = qslist[1]
-            if worst:
-                self.populate(qslist[-self.pop_cut:], sel_worst=worst)
-            else:
-                self.populate(qslist[:self.pop_cut], sel_worst=worst)
-            switch_counter -= 1
-            if not switch_counter:
-                switch_counter = self.alternate
-                worst = not worst
-                self.flip_selection(worst)
-
-            self.G.solve_order(self.last_pop[0], _print=True)
-            print("Current best path =\t", self.sol_ord,
-                  "\nCurrent best length =\t", self.sol_len)
-
-        self.G.solve_order(self.last_pop[0], _print=True)
-        print("Final Path =\t", self.last_pop[0], "\nFinal Length =\t",)
-
 
 ###############################################################################
 ###  Config
@@ -805,7 +605,7 @@ class APPA:
 ASK = False
 
 GRIDNUM = 0
-NETLISTNUMS = [1,3,4]
+NETLISTNUMS = [1]
 X = 30
 Y = 30
 G = 100
@@ -820,28 +620,14 @@ ITERATIONS = 5000
 
 #PPA
 GENERATIONS = 120
-ELITISM = 10
-POP_CUT = 10
-MAX_RUNNERS = 7
-SUBDIR = "circuit_map_git"
+ELITISM = 30
+POP_CUT = 30
+MAX_RUNNERS = 5
 
-EXP_SUBDIR = "Experimental_map"
+SUBDIR_OLD = "circuit_map_git_swap_always_2"  # <-- bad data
+SUBDIR_NEW = "circuit_map_git_swap_two_X_times"
 
 
-""" Experimental stuff
-
-#EXP
-ALTERNATE = 2
-EXP_GEN = 120
-EXP_CUT = POP_CUT
-EXP_ELITE = ELITISM
-EXP_RUNRS = 5
-gridfile = get_name_circuitfile(0, X, Y, G)
-netfile = get_name_netfile(0, 1)
-Gr = file_to_grid(EXP_SUBDIR + '/' + gridfile, 100)
-Gr.read_nets(EXP_SUBDIR, netfile)
-EXP_BATCH = [Gr.get_random_net_order() for _ in range(EXP_CUT)]
-"""
 
 #Todo SA possible with different values to anneal con & len
 ANN_FUNC_PARAMS_LEN = ["length", "geman", 700, 10, None, None]
@@ -859,34 +645,29 @@ if __name__ == '__main__':
     for NETLIST_NUM in NETLISTNUMS:
         for i in range(10):
             if False:
-                rc = RC(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, RC_ADDITION, BATCHES, ask=ASK)
+                rc = RC(SUBDIR_NEW, GRIDNUM, NETLIST_NUM, X, Y, G, RC_ADDITION, BATCHES, ask=ASK)
                 rc.run_algorithm()
             if False:
                 #subdir, grid_num, net_num, x, y, tot_gates,consec_swaps, iterations, addition
-                hc = HC(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
+                hc = HC(SUBDIR_NEW, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
                         HC_ADDITION+[', VR3.' +str(i) + '_'], ask=ASK)
 
                 hc.run_algorithm()
             if False:  #SA length
-                sa = SA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
+                sa = SA(SUBDIR_NEW, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
                         ANN_FUNC_PARAMS_BOTH, SA_LEN_ADDITION, ask=ASK)
                 sa.run_algorithm()
             if False:  #SA connections
-                sa = SA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
+                sa = SA(SUBDIR_NEW, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
                         ANN_FUNC_PARAMS_BOTH, SA_CONN_ADDITION, ask=ASK)
                 sa.run_algorithm()
             if False:  #SA all
-                sa = SA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
+                sa = SA(SUBDIR_NEW, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
                         ANN_FUNC_PARAMS_BOTH, SA_ALL_ADDITION, ask=ASK)
                 sa.run_algorithm()
-            if False:   # PPA standard
-                ppa = PPA(SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G, GENERATIONS,
-                          additions=[', VR2.' +str(i) + '_'], elitism=ELITISM,
+            if True:   # PPA standard
+                ppa = PPA(SUBDIR_NEW, GRIDNUM, NETLIST_NUM, X, Y, G, GENERATIONS,
+                          additions=[', VR1.' +str(i) + '_'], elitism=ELITISM,
                           pop_cut=POP_CUT, max_runners=MAX_RUNNERS, ask=ASK)
                 ppa.run_algorithm()
-            if True:   # PPA Experiment
-                ppa = PPA(EXP_SUBDIR, GRIDNUM, NETLIST_NUM, X, Y, G,
-                          GENERATIONS, additions=[', VR2.' +str(i) + '_'],
-                          elitism=ELITISM,pop_cut=POP_CUT,
-                          max_runners=MAX_RUNNERS, ask=ASK)
-                ppa.run_algorithm()
+

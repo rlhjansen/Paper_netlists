@@ -185,6 +185,20 @@ def swap_two_elems(net_path, prev_swap_ind=-1):
     npath[i1], npath[i2] = npath[i2], npath[i1]
     return npath, i2
 
+def swap_two_X_times(net_path, X):
+    npath = list(net_path)[:]
+    end_index = len(net_path) - 1
+    swaps = []
+    while True:
+        swaps = [randint(0, end_index) for _ in range(X*2)]
+        set_swaps = set(swaps)
+        if len(swaps) == len(set_swaps):
+            break
+        #print("false swaplist", swaps)
+    #print("true swaps", swaps)
+    for i in range(X):
+        npath[swaps[2*i]], npath[swaps[2*i+1]] = npath[swaps[2*i+1]], npath[swaps[2*i]]
+    return npath
 
 def swap_two_inplace(net_path):
     """ swaps two random elements of a list in place
