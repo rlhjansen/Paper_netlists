@@ -41,11 +41,16 @@ def get_data(file_name):
     print(df)
     return df
 
-df = get_data('PPA/ppa.tsv')
+def plottus(df, color):
+    # sns.tsplot(df['min'], df['i'],color=color)
+    sns.tsplot(df['max'], df['i'],color=color)
+    sns.tsplot(df['mean'], df['i'],color=color)
+    plt.fill_between(df['i'], df['mean'], df['max'], color=color, alpha='0.5')
+
+df1 = get_data('PPA/ppa_1.tsv')
+df4 = get_data('PPA/ppa_4.tsv')
 
 sns.set_style("darkgrid")
-ax1 = sns.tsplot(df['min'], df['i'])
-ax2 = sns.tsplot(df['max'], df['i'])
-ax3 = sns.tsplot(df['mean'], df['i'])
-plt.fill_between(df['i'], df['min'], df['max'], color='grey', alpha='0.5')
+plottus(df1, 'red')
+plottus(df4, 'blue')
 plt.show()
