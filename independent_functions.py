@@ -2,8 +2,9 @@ import os
 import functools
 import operator
 
-from shutil import copy
+import numpy as np
 
+from shutil import copy
 from random import randint
 from math import sqrt, floor
 
@@ -11,13 +12,17 @@ from math import sqrt, floor
 # https://matplotlib.org/mpl_toolkits/mplot3d/tutorial.html
 
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D #<-- Note the capitalization!
+from matplotlib.ticker import MaxNLocator
+
 
 
 ###############################################################################
 #  Plotting -circuit                                                          #
 ###############################################################################
 
-shapes_string = "- -- -. :"
+#shapes_string = "- -- -. :"
+shapes_string = "-"
 SHAPES = shapes_string.split(' ')
 COLOURS = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
 
@@ -25,7 +30,7 @@ col_len = len(COLOURS)
 
 
 def get_markers(n):
-    return [SHAPES[i % 4] + COLOURS[i % col_len] for i in range(n)]
+    return [SHAPES[i % len(SHAPES)] + COLOURS[i % col_len] for i in range(n)]
 
 
 def paths_to_plotlines(paths):
@@ -90,8 +95,10 @@ def plot_circuit(paths, order, gates, gate_tags):
     xpp, ypp, zpp = paths_to_plotlines(c_paths)
     xgs, ygs, zgs = split_gates(gates)
     markers = get_markers(len(xpp))
+
+
     fig = plt.figure()
-    ax = plt.axes(projection='3d')
+    ax = Axes3D(fig)
 
     plotcount = len(xpp)
     ax.set_title(create_plot_title(original_len, plotcount))
@@ -100,12 +107,18 @@ def plot_circuit(paths, order, gates, gate_tags):
         ax.plot(xpp[i], ypp[i], zpp[i], markers[i], label=c_order[i])
 
     ax.scatter3D(xgs, ygs, zgs)
+    ax.set_zticks(np.arange(0, max([max(i) for i in zpp]) + 1, 1.0))
+    ax.set_xticks(np.arange(0, 29, 1.0))
+    ax.set_yticks(np.arange(2, 31, 1.0))
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    #ax.xaxis.set_major_locator(MaxNLocator(prune='both'))
     fig.savefig("temp_plus_gates.png")
 
 
 def create_plot_title(original_len, placed):
-    return "netlist_placement for " + str(placed) +" out of" + \
-           str(original_len) + "nets"
+    return "netlist placement for " + str(placed) +" out of " + \
+           str(original_len) + " nets"
 
 
 def split_gates(gates):
@@ -308,6 +321,7 @@ def get_name_circuitfile(gridnum, x, y, tot_gates):
 def create_data_directory(main_subdir, gridnum, x, y, tot_gates, listnum, additions, ask=True):
     gridfn = get_name_circuitfile(gridnum, x, y, tot_gates)
     netfn = get_name_netfile(gridnum, listnum)
+    print(additions)
     new_subdir = '_'.join(additions) + '_' + gridfn[:-4] + "_" + netfn
     rel_path = os.path.join(main_subdir, new_subdir)
     script_dir = os.path.dirname(__file__)
