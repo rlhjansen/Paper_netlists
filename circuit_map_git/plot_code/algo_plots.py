@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 from statistics import median
 import numpy as np
+import pandas as pd
 
 
 def combine_score(connections, length):
@@ -14,7 +15,7 @@ class algo_plots:
 
     def __init__(self):
         self.hc_dir = 'HC/'
-        self.ppa_dir = 'PPA/'
+        self.ppa_dir = 'PPA_yv/'
         self.rd_dir = 'RD/'
         self.hc_dct = self.hc_data()
         self.ppa_dct = self.ppa_data()
@@ -28,12 +29,15 @@ class algo_plots:
 
         result_dict = {}
         hc_dir = os.listdir(self.hc_dir)
+        print(hc_dir)
+        hc_dict = {'i':[],'score':[],'hc':[], 'subject':[]}
 
         for i,file in enumerate(hc_dir):
             result_dict[i] = {}
             # print('cur dir', file)
-            it_lst,score_lst = [], []
+            it_lst,score_lst  = [], []
             high_connect, high_len = 0, 0
+
             with open(self.hc_dir+file) as csvfile:
                 csv_rd = csv.reader(csvfile)
                 # print(file)
@@ -46,13 +50,18 @@ class algo_plots:
                         h_val = combine_score(high_connect, high_len)
                     it_lst.append(idx)
                     score_lst.append(float(h_val))
+                    hc_dict['i'].append(idx)
+                    hc_dict['score'].append(h_val)
+                    hc_dict['hc'].append(i)
+                    hc_dict['subject'].append(0)
                 result_dict[i]['iter'], result_dict[i]['score'] = it_lst, score_lst
-        # print(result_dict)
+        # print('jups',result_dict)
         best, bi = 0, None
         worst, wi = 100, None
         s_endpoints = sorted([result_dict[i]['score'][-1] for i in range(len(result_dict))])
         median, mi = s_endpoints[int(len(s_endpoints)/2)], None
-
+        df = pd.DataFrame(data=hc_dict)
+        df.to_pickle('hc_df_jeah.pickle')
         for i in range(len(result_dict)):
             if result_dict[i]['score'][-1] < worst:
                 worst, wi = result_dict[i]['score'][-1], i
@@ -60,14 +69,16 @@ class algo_plots:
                 best, bi = result_dict[i]['score'][-1], i
             if result_dict[i]['score'][-1] == median:
                 mi = i
+        print(best, worst)
         self.besthc = bi
         self.worsthc = wi
         self.medianhc = mi
+
         return result_dict
 
     def get_best_ppa_iterdict(self, compare_median=True):
         for key, item in self.ppa_dct.items():
-            print(key, max(item['score']))
+            print('ppa',key, max(item['score']))
         if compare_median:
             return [median([max(item['score']) for key, item in self.ppa_dct.items()])]
         else:
@@ -142,12 +153,12 @@ class algo_plots:
         maxlist = [max(item['score']) for key, item in ppa_dct.items()]
         med = median(maxlist)
         mmax = max(maxlist)
-        print('lukt het?', med, maxlist)
+        # print('lukt het?', med, maxlist)
         ind_med = maxlist.index(med)
         ind_max = maxlist.index(mmax)
         ppa_dct['median'] = ppa_dct[ind_med]
         ppa_dct['best'] = ppa_dct[ind_max]
-        print('kom ik hier',ind_med, ind_max)
+        # print('kom ik hier',ind_med, ind_max)
         return ppa_dct
 
     def ppa_plot(self):
@@ -189,7 +200,7 @@ class algo_plots:
         plt.clf()
         #plt.figure(figsize=(10, 5))
         for key,item in self.rd_dct.items():
-            print('jeej')
+            # print('jeej')
             density = gaussian_kde(item['score'])
             xs = np.linspace(40, 90, 10000)
             plt.plot(xs, density(xs), label='random samples')

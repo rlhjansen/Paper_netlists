@@ -42,10 +42,16 @@ def get_data(file_name):
     return df
 
 def plottus(df, color):
-    # sns.tsplot(df['min'], df['i'],color=color)
+    sns.tsplot(df['min'], df['i'],color=color)
     sns.tsplot(df['max'], df['i'],color=color)
     sns.tsplot(df['mean'], df['i'],color=color)
-    plt.fill_between(df['i'], df['mean'], df['max'], color=color, alpha='0.5')
+    plt.fill_between(df['i'], df['min'], df['max'], color=color, alpha='0.5')
+
+def plottus_sd(df, color):
+    # sns.tsplot(df['min'], df['i'],color=color)
+    sns.tsplot((df['max']-df['mean']), df['i'],color=color)
+    sns.tsplot((df['min']-df['mean']), df['i'],color=color)
+    plt.fill_between(df['i'], (df['max']-df['mean']), (df['min']-df['mean']), color=color, alpha='0.5')
 
 df1 = get_data('PPA/ppa_1.tsv')
 df4 = get_data('PPA/ppa_4.tsv')
