@@ -144,11 +144,6 @@ class Node:
             self.value = "0"
             self.net = False
 
-
-    """ Functions below are not used for the course, but are for a personal
-
-    project.
-    """
     def reset_cur_outgoing(self):
         self.cur_outgoing = 0
 

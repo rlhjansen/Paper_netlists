@@ -13,7 +13,6 @@ from math import sqrt, floor
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D #<-- Note the capitalization!
-from matplotlib.ticker import MaxNLocator
 
 
 
@@ -24,7 +23,7 @@ from matplotlib.ticker import MaxNLocator
 #shapes_string = "- -- -. :"
 shapes_string = "-"
 SHAPES = shapes_string.split(' ')
-COLOURS = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
+COLOURS = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 
 col_len = len(COLOURS)
 
@@ -74,7 +73,7 @@ def remove_empty_paths(paths, order):
     return clean_paths, clean_order
 
 
-def plot_circuit(paths, order, gates, gate_tags):
+def plot_circuit(paths, order, gates, gate_tags, mesh_height, select, save_name, alt_title=None):
     """ Plots the complete circuit in 3D, filled by way of the paths
 
     This is a temporary function as a prelude to further visualisation
@@ -100,25 +99,69 @@ def plot_circuit(paths, order, gates, gate_tags):
     fig = plt.figure()
     ax = Axes3D(fig)
 
+    #title
     plotcount = len(xpp)
-    ax.set_title(create_plot_title(original_len, plotcount))
-
+    if not alt_title:
+        ax.set_title(create_plot_title(original_len, plotcount))
+    else:
+        ax.set_title(alt_title)
     for i in range(plotcount):
         ax.plot(xpp[i], ypp[i], zpp[i], markers[i], label=c_order[i])
 
-    ax.scatter3D(xgs, ygs, zgs)
-    ax.set_zticks(np.arange(0, max([max(i) for i in zpp]) + 1, 1.0))
-    ax.set_xticks(np.arange(0, 29, 1.0))
-    ax.set_yticks(np.arange(2, 31, 1.0))
+    #gates
+    s = ax.scatter3D(xgs, ygs, zgs)
+    s.set_edgecolors = s.set_facecolors = lambda *args: None
+
+    #ticks
+    try:
+        highest = max([max(i) for i in zpp])
+        print("highest =", highest)
+    except ValueError:
+        highest = 0
+        print("No nets added")
+
+    ax.set_zticks(np.arange(0, highest + 1, 1.0))
+    ax.set_xticks(np.array([]))
+    ax.set_yticks(np.array([]))
+    #ax.set_yticks(np.arange(2, 31, 1.0))
     ax.set_xticklabels([])
     ax.set_yticklabels([])
-    #ax.xaxis.set_major_locator(MaxNLocator(prune='both'))
-    fig.savefig("temp_plus_gates.png")
+
+    #layer meshes
+    if mesh_height:
+        add_mesh(ax, mesh_height)
+    else:
+        add_mesh(ax, highest+1)
+        ax.set_zlim(np.array([0, highest+1]))
+
+    #circle around (gif?)
+    if False:
+        for angle in range(0, 60):
+            ax.view_init(30, angle*6)
+            plt.draw()
+            plt.pause(.001)
+    fig.subplots_adjust(left=0, right=1, bottom=0, top=7)
+    plt.draw()
+    if select:
+        plt.show()
+    else:
+        fig.savefig(save_name)
+
+
+def add_mesh(ax, h):
+    for height in range(h):
+        # for mesh overlay
+        xint = np.array([i for i in range(30)])
+        yint = np.array([i for i in range(30)])
+        zint = np.array([height for _ in range(30)])
+        X, Y = np.meshgrid(xint, yint)
+        Z, _ = np.meshgrid(zint, zint)
+        ax.plot_wireframe(X, Y, Z, rstride=1, cstride=1, linewidth=0.5/(h+1),
+                          color=(0, 0, 0))
 
 
 def create_plot_title(original_len, placed):
-    return "netlist placement for " + str(placed) +" out of " + \
-           str(original_len) + " nets"
+    return str(placed) + " nets placed"
 
 
 def split_gates(gates):
