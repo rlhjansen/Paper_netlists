@@ -8,30 +8,41 @@ def get_ppa():
     pd_dict = {'ppa':[],'gen':[],'max':[],'mean':[],'min':[],'max_pop':[],'mean_pop':[],'min_pop':[],'max_el':[],'mean_el':[],'min_el':[],'i':[]}
 
     ppa_dir = os.listdir('PPA_yv')
-
+    ppa_dct = {'ppa':[],'i':[],'score':[]}
+    crappy_dct = {'ppa':[],'i':[],'score':[]}
     for i,file in enumerate(ppa_dir):
         ppa_nm = file.split('_')[1]
-        # print(ppa_nm)
         with open('PPA_yv/'+file) as csvfile:
             csv_rd = csv.reader(csvfile)
             gen_count = 0
             gen_dict = {0:[]}
+            j = 0
             for row in csv_rd:
-                # print(row)
                 if row[0].startswith('#'):
+                    jup = [max(gen_dict[gen_count])]*len(gen_dict[gen_count])
+                    print(gen_count,max(gen_dict[gen_count]),len(gen_dict[gen_count]), gen_dict[gen_count])
+                    ppa_dct['score'] = ppa_dct['score'] + jup
                     gen_count += 1
                     gen_dict[gen_count] = []
+
+
                 else:
                     score = int(row[0])+(1-(int(row[1])/10000))
                     gen_dict[gen_count].append(score)
+                    ppa_dct['ppa'].append(ppa_nm)
+                    ppa_dct['i'].append(j)
+                    j += 1
 
-            # print(gen_dict)
 
+        print(len(ppa_dct['ppa']),len(ppa_dct['i']),len(ppa_dct['score']))
+        # print(ppa_dct)
+        df_lines = pd.DataFrame(data=ppa_dct)
+        print(df_lines)
 
         i = 0
         select_val = []
+
         for key, value in gen_dict.items():
-            # print(key, value)
             if value:
                 val_len = len(value)
                 mean = sum(value)/val_len
@@ -52,11 +63,18 @@ def get_ppa():
                 pd_dict['max_el'].append(select_val[0])
                 pd_dict['mean_el'].append(sum(select_val)/len(select_val))
                 pd_dict['min_el'].append(select_val[-1])
+                ppa_lst = [ppa_nm]* val_len
+                i_lst = list(range(i, (i+val_len)))
+                score_lst = [select_val[0]]* val_len
+                crappy_dct['ppa'] = crappy_dct['ppa'] + ppa_lst
+                crappy_dct['i'] = crappy_dct['i'] + i_lst
+                crappy_dct['score'] = crappy_dct['score'] + score_lst
+
                 i += val_len
-    df = pd.DataFrame(data=pd_dict)
+
+    df = pd.DataFrame(data=crappy_dct)
     df.to_pickle('ppa_df.pickle')
     df.to_csv('ppa_df.csv')
-    # print(df)
     return df
 
 def get_hc():
@@ -65,7 +83,6 @@ def get_hc():
 
     for i,file in enumerate(hc_dir):
         hc_nm = file.split('_')[1]
-        # print(ppa_nm)
         with open('HC_yv/'+file) as csvfile:
             csv_rd = csv.reader(csvfile)
             for i, row in enumerate(csv_rd):
@@ -80,6 +97,9 @@ def get_hc():
     df.to_csv('hc_df.csv')
     return df
 
+def get_data(df):
+    df.loc
+
 
 
 
@@ -89,11 +109,9 @@ def best_med(df):
     for run in ppa_lst:
         jup = df.loc[df['ppa'] == run].sort_values('max_pop', ascending=True)
         score_lst.append(float(jup.max_pop.iat[-1]))
-        # print(sorted(list(jup.max_pop.iat[-1])))
-        # print(list(jup[['ppa','max_pop']].iloc[-1]))
-        # print(jup)
+
     score_lst, ppa_lst = (list(t) for t in zip(*sorted(zip(score_lst, ppa_lst))))
-    print(score_lst, ppa_lst)
+    # print(score_lst, ppa_lst)
 
 def plottus(df_hc, df_ppa):
 
@@ -101,44 +119,26 @@ def plottus(df_hc, df_ppa):
 
     sns.set_style("darkgrid")
     df_ppa['subject'] = 0
-    ppa_h = df_ppa.loc[df_ppa['ppa'] == '6']
-    ppa_l = df_ppa.loc[df_ppa['ppa'] == '2']
-    print(df_hc)
+    ppa_h = df_ppa.loc[(df_ppa['ppa'] == '6') & (df_ppa['i'])]
+    ppa_l = df_ppa.loc[(df_ppa['ppa'] == '2') & (df_ppa['i'])]
+    print(ppa_h)
+
     hc_h = df_hc.loc[df_hc['hc'] == 5]
     hc_l = df_hc.loc[df_hc['hc'] == 1]
-    print(hc_h)
 
-
-
-    # print(ppa_h)
-    # df.plot()
-    # ax1 = sns.tsplot(time='i',condition='ppa', value='max_el',data=ppa_df,unit='subject')
-    # plt.fill_between(df['i'], df['max_pop'], df['mean_pop'], color='red', alpha='0.5')
-    # ax2 = sns.tsplot(time='i',condition='ppa', value='max_el',data=df,unit='subject')
-    # fig, ax = plt.subplots()
-    # labels = ['PPA', 'HC']
-    ax = sns.tsplot(ppa_h['max_pop'], ppa_h['i'],color='blue')
-    sns.tsplot(ppa_l['max_pop'], ppa_l['i'],color='blue')
+    ax = sns.tsplot(ppa_h['score'], ppa_h['i'],color='blue')
+    sns.tsplot(ppa_l['score'], ppa_l['i'],color='blue')
     sns.tsplot(hc_h['score'], hc_h['i'],color='red')
     sns.tsplot(hc_l['score'], hc_l['i'],color='red')
     plt.fill_between(hc_l['i'], hc_h['score'], hc_l['score'], color='red', alpha='0.4')
-    plt.fill_between(ppa_h['i'], ppa_h['max_pop'], ppa_l['max_pop'], color='blue', alpha='0.4')
+    plt.fill_between(ppa_h['i'], ppa_h['score'], ppa_l['score'], color='blue', alpha='0.4')
     ax.set(xlabel='function evaluations', ylabel='objective function value')
     plt.legend(['PPA', 'HC'],loc='upper left', frameon=True)
     # plt.show()
     plt.savefig('FINAL_HC_PPA_PLOT.png')
 
-    # sns.tsplot(df['mean_el'], df['i'],color='blue')
-    # plt.fill_between(df['i'], df['max_el'], df['mean_el'], color='blue', alpha='0.5')
 
 df_ppa = get_ppa()
-# best_med(df_ppa)
 df_hc = pd.read_pickle('hc_df_jeah.pickle')
 
-# print(df_hc)
-# print(df)
 plottus(df_hc,df_ppa)
-# best_med(df)
-
-
-# plottus(df4, 'blue')
