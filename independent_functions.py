@@ -11,167 +11,6 @@ from math import sqrt, floor
 # for plotting
 # https://matplotlib.org/mpl_toolkits/mplot3d/tutorial.html
 
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D #<-- Note the capitalization!
-
-
-
-###############################################################################
-#  Plotting -circuit                                                          #
-###############################################################################
-
-#shapes_string = "- -- -. :"
-shapes_string = "-"
-SHAPES = shapes_string.split(' ')
-COLOURS = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
-
-col_len = len(COLOURS)
-
-
-def get_markers(n):
-    return [SHAPES[i % len(SHAPES)] + COLOURS[i % col_len] for i in range(n)]
-
-
-def paths_to_plotlines(paths):
-    """ transforms paths format from the grid to a series of plottable points
-
-    :param paths: list of tuples of tuples
-        each outer tuple represents a path for how a certain net is laid
-        each inner tuple represents a specific (x,y,z) location on the circuit
-    :return xpp, ypp, zpp: multiple list of lists where the inner list is a
-        series of points to be plotted for a single netlist (on x,y,z axis
-        respectively)
-    """
-    xpp = []
-    ypp = []
-    zpp = []
-
-    for path in paths:
-        print(path)
-        pxs = [spot[0] for spot in path]
-        pys = [spot[1] for spot in path]
-        pzs = [spot[2] for spot in path]
-
-        xpp.append(pxs)
-        ypp.append(pys)
-        zpp.append(pzs)
-    return xpp, ypp, zpp
-
-
-def remove_empty_paths(paths, order):
-    clean_paths = []
-    clean_order = []
-    for i, path in enumerate(paths):
-        print(path)
-        if len(path)-1:
-            print("added")
-            clean_paths.append(path)
-            clean_order.append(order[i])
-        else:
-            print("not added")
-    print(len(clean_order))
-    return clean_paths, clean_order
-
-
-def plot_circuit(paths, order, gates, gate_tags, mesh_height, select, save_name, alt_title=None):
-    """ Plots the complete circuit in 3D, filled by way of the paths
-
-    This is a temporary function as a prelude to further visualisation
-
-    :param paths: List of tuples of tuples
-        Each outer tuple represents a path for how a certain net is laid
-        Each inner tuple represents a specific (x,y,z) location on the circuit
-    :param order: Instance of an order of netlists
-    :param gates: List of tuples, each representing a gate on the circuit
-    :param gate_tags: The names of the gates (i.e. g1, g2, g3) in the same
-        order as in the gates list
-    """
-    #TODO add gates to plot
-    #TODO add algorithm specifics to plot-title
-    #TODO add max dimensions of plot (to resemble circuit)
-    original_len = len(order)
-    c_paths, c_order = remove_empty_paths(paths, order)
-    xpp, ypp, zpp = paths_to_plotlines(c_paths)
-    xgs, ygs, zgs = split_gates(gates)
-    markers = get_markers(len(xpp))
-
-
-    fig = plt.figure()
-    ax = Axes3D(fig)
-
-    #title
-    plotcount = len(xpp)
-    if not alt_title:
-        ax.set_title(create_plot_title(original_len, plotcount))
-    else:
-        ax.set_title(alt_title)
-    for i in range(plotcount):
-        ax.plot(xpp[i], ypp[i], zpp[i], markers[i], label=c_order[i])
-
-    #gates
-    s = ax.scatter3D(xgs, ygs, zgs)
-    s.set_edgecolors = s.set_facecolors = lambda *args: None
-
-    #ticks
-    try:
-        highest = max([max(i) for i in zpp])
-        print("highest =", highest)
-    except ValueError:
-        highest = 0
-        print("No nets added")
-
-    ax.set_zticks(np.arange(0, highest + 1, 1.0))
-    ax.set_xticks(np.array([]))
-    ax.set_yticks(np.array([]))
-    #ax.set_yticks(np.arange(2, 31, 1.0))
-    ax.set_xticklabels([])
-    ax.set_yticklabels([])
-
-    #layer meshes
-    if mesh_height:
-        add_mesh(ax, mesh_height)
-    else:
-        add_mesh(ax, highest+1)
-        ax.set_zlim(np.array([0, highest+1]))
-
-    #circle around (gif?)
-    if False:
-        for angle in range(0, 60):
-            ax.view_init(30, angle*6)
-            plt.draw()
-            plt.pause(.001)
-    fig.subplots_adjust(left=0, right=1, bottom=0, top=7)
-    plt.draw()
-    if select:
-        plt.show()
-    else:
-        fig.savefig(save_name)
-
-
-def add_mesh(ax, h):
-    for height in range(h):
-        # for mesh overlay
-        xint = np.array([i for i in range(30)])
-        yint = np.array([i for i in range(30)])
-        zint = np.array([height for _ in range(30)])
-        X, Y = np.meshgrid(xint, yint)
-        Z, _ = np.meshgrid(zint, zint)
-        ax.plot_wireframe(X, Y, Z, rstride=1, cstride=1, linewidth=0.5/(h+1),
-                          color=(0, 0, 0))
-
-
-def create_plot_title(original_len, placed):
-    return str(placed) + " nets placed"
-
-
-def split_gates(gates):
-    print("gates", gates)
-    for gate in gates:
-        print(gate)
-    xgs = [gate[0] for gate in gates]
-    ygs = [gate[1] for gate in gates]
-    zgs = [gate[2] for gate in gates]
-    return xgs, ygs, zgs
 
 
 ###############################################################################
@@ -547,6 +386,11 @@ def transform_print(val, advanced_heuristics):
             return 'GA'
         else:
             raise NotImplementedError
+
+
+def lprint(some_list):
+    for elem in some_list:
+        print(elem)
 
 
 def print_start_iter(gridnum, netnum, algorithm, iteration):
