@@ -236,6 +236,12 @@ def get_circuit_basics(grid_num, net_num, x, y, g, order, ordlength=-1):
 ###############################################################################
 # Model types
 ###############################################################################
+""" Selecting netlist, net order, circuit layout (gates) & other parameters 
+
+are all done at the top of the file as of now, functions here only take account of what is needed for the drawing.
+
+I REPEAT: GLOBAL VARIABLES GALORE!
+"""
 
 
 def create_model(titlestring="", height=None, order=None, ordlength=None, select=False, save_name="net model"):
@@ -245,6 +251,7 @@ def create_model(titlestring="", height=None, order=None, ordlength=None, select
 
 
 def create_base_model(titlestring, select=False, save_name="bottom layer model.png"):
+
     g_coords, _, _= get_circuit_basics(GRIDNUM, NL_NUM, X,
                                                            Y, G, [])
     plot_circuit([], [], g_coords, False, select, X, Y, save_name, alt_title=titlestring)
@@ -252,7 +259,7 @@ def create_base_model(titlestring, select=False, save_name="bottom layer model.p
 
 def create_model_gif(subdir, select=False, height=None, order=None, ordlength=None, save_name="gif_model_parts", resize=1, redraw=False, del_after=False):
 
-    g_coords, _, build_paths = get_circuit_basics(GRIDNUM, NL_NUM, X, Y, G, order)
+    g_coords, _, build_paths = get_circuit_basics(GRIDNUM, NL_NUM, X, Y, G, order, ordlength=ordlength)
 
     if redraw:
         for i in range(len(build_paths)):
@@ -273,6 +280,15 @@ def create_model_gif(subdir, select=False, height=None, order=None, ordlength=No
                                          filename))
 
 
-create_base_model(" ")
-create_model(" ",height=5, order=LONG_ORD,ordlength=30)
+
+""" Selecting netlist, net order, circuit layout (gates) & other parameters 
+
+are all done at the top of the file as of now, functions here only take account of what is needed for the drawing.
+
+I REPEAT: WHEN CALLING THESE FUNCTIONS, GLOBAL VARIABLES GALORE!
+"""
+
+
+#create_base_model(" ")
+#create_model(" ",height=5, order=LONG_ORD, ordlength=NET_MAX)
 #create_model_gif("Gifs", ordlength=83, redraw=True, height=MESH_HEIGHT, order=LONG_ORD, resize=RESIZE, del_after=True)
