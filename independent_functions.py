@@ -11,124 +11,6 @@ from math import sqrt, floor
 # for plotting
 # https://matplotlib.org/mpl_toolkits/mplot3d/tutorial.html
 
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D #<-- Note the capitalization!
-from matplotlib.ticker import MaxNLocator
-
-
-
-###############################################################################
-#  Plotting -circuit                                                          #
-###############################################################################
-
-#shapes_string = "- -- -. :"
-shapes_string = "-"
-SHAPES = shapes_string.split(' ')
-COLOURS = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
-
-col_len = len(COLOURS)
-
-
-def get_markers(n):
-    return [SHAPES[i % len(SHAPES)] + COLOURS[i % col_len] for i in range(n)]
-
-
-def paths_to_plotlines(paths):
-    """ transforms paths format from the grid to a series of plottable points
-
-    :param paths: list of tuples of tuples
-        each outer tuple represents a path for how a certain net is laid
-        each inner tuple represents a specific (x,y,z) location on the circuit
-    :return xpp, ypp, zpp: multiple list of lists where the inner list is a
-        series of points to be plotted for a single netlist (on x,y,z axis
-        respectively)
-    """
-    xpp = []
-    ypp = []
-    zpp = []
-
-    for path in paths:
-        print(path)
-        pxs = [spot[0] for spot in path]
-        pys = [spot[1] for spot in path]
-        pzs = [spot[2] for spot in path]
-
-        xpp.append(pxs)
-        ypp.append(pys)
-        zpp.append(pzs)
-    return xpp, ypp, zpp
-
-
-def remove_empty_paths(paths, order):
-    clean_paths = []
-    clean_order = []
-    for i, path in enumerate(paths):
-        print(path)
-        if len(path)-1:
-            print("added")
-            clean_paths.append(path)
-            clean_order.append(order[i])
-        else:
-            print("not added")
-    print(len(clean_order))
-    return clean_paths, clean_order
-
-
-def plot_circuit(paths, order, gates, gate_tags):
-    """ Plots the complete circuit in 3D, filled by way of the paths
-
-    This is a temporary function as a prelude to further visualisation
-
-    :param paths: List of tuples of tuples
-        Each outer tuple represents a path for how a certain net is laid
-        Each inner tuple represents a specific (x,y,z) location on the circuit
-    :param order: Instance of an order of netlists
-    :param gates: List of tuples, each representing a gate on the circuit
-    :param gate_tags: The names of the gates (i.e. g1, g2, g3) in the same
-        order as in the gates list
-    """
-    #TODO add gates to plot
-    #TODO add algorithm specifics to plot-title
-    #TODO add max dimensions of plot (to resemble circuit)
-    original_len = len(order)
-    c_paths, c_order = remove_empty_paths(paths, order)
-    xpp, ypp, zpp = paths_to_plotlines(c_paths)
-    xgs, ygs, zgs = split_gates(gates)
-    markers = get_markers(len(xpp))
-
-
-    fig = plt.figure()
-    ax = Axes3D(fig)
-
-    plotcount = len(xpp)
-    ax.set_title(create_plot_title(original_len, plotcount))
-
-    for i in range(plotcount):
-        ax.plot(xpp[i], ypp[i], zpp[i], markers[i], label=c_order[i])
-
-    ax.scatter3D(xgs, ygs, zgs)
-    ax.set_zticks(np.arange(0, max([max(i) for i in zpp]) + 1, 1.0))
-    ax.set_xticks(np.arange(0, 29, 1.0))
-    ax.set_yticks(np.arange(2, 31, 1.0))
-    ax.set_xticklabels([])
-    ax.set_yticklabels([])
-    #ax.xaxis.set_major_locator(MaxNLocator(prune='both'))
-    fig.savefig("temp_plus_gates.png")
-
-
-def create_plot_title(original_len, placed):
-    return "netlist placement for " + str(placed) +" out of " + \
-           str(original_len) + " nets"
-
-
-def split_gates(gates):
-    print("gates", gates)
-    for gate in gates:
-        print(gate)
-    xgs = [gate[0] for gate in gates]
-    ygs = [gate[1] for gate in gates]
-    zgs = [gate[2] for gate in gates]
-    return xgs, ygs, zgs
 
 
 ###############################################################################
@@ -504,6 +386,11 @@ def transform_print(val, advanced_heuristics):
             return 'GA'
         else:
             raise NotImplementedError
+
+
+def lprint(some_list):
+    for elem in some_list:
+        print(elem)
 
 
 def print_start_iter(gridnum, netnum, algorithm, iteration):

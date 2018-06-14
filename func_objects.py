@@ -667,7 +667,7 @@ if __name__ == '__main__':
                 sa.run_algorithm()
             if True:   # PPA standard
                 ppa = PPA(SUBDIR_NEW, GRIDNUM, NETLIST_NUM, X, Y, G, GENERATIONS,
-                          additions=[', VR1.' +str(i) + '_'], elitism=ELITISM,
+                          additions=['VR1.' +str(i) + '_'], elitism=ELITISM,
                           pop_cut=POP_CUT, max_runners=MAX_RUNNERS, ask=ASK)
                 ppa.run_algorithm()
 
