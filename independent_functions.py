@@ -14,32 +14,6 @@ from math import sqrt, floor
 
 
 ###############################################################################
-#  Plotting - results                                                         #
-###############################################################################
-
-def file_vars(fname):
-    connections = []
-    lengths = []
-    with open(fname, 'r') as f:
-        for line in f:
-            line = f.readline()
-            line = line.split("\t")[0]
-            line = line.split(",")
-            connections.append(line[0])
-            lengths.append(line[1])
-    return connections, lengths
-
-
-def plot_values(series, labels):
-    fig = plt.figure()
-    plot_len = len(series[0])
-    xs = [i for i in range(plot_len)]
-    for i, values in enumerate(series):
-        plt.plot(xs, values, label=labels[i])
-    #Todo make appropraite per results
-    fig.savefig(",".join(labels)+".png")
-
-###############################################################################
 # Sorting                                                                     #
 ###############################################################################
 
@@ -146,19 +120,44 @@ def quicksort(arr):
     return less + pivotList + more
 
 
-def combine_score(connections, length):
+def combine_score(n_nets, connections, length, *args):
     """ combines cnnections & length components into a single score
 
     ex: 45 connections, 400  wire length --> 45.9600
         46 connections, 1680 wire length --> 46.8320
 
+    :param n_nets: number of nets given by netlist.
     :param connections: number of connected nets
-    :param length:
+    :param length: tot length of nets on the circuit
     :return:
     """
     frac_part = float(10000-length)/10000.
     return float(connections)+frac_part
 
+
+def score_connect_only(n_nets, connections, *args):
+    """ Returns objective function evaluation when basing only on number of
+
+    connections
+
+    :param n_nets: number of nets given by netlist.
+    :param connections: number of connected nets
+    :param args: smoother function handling for other scoring functions,
+        arbitrary
+    :return: float of number of connected nets
+    """
+    return float(connections)
+
+def multi_objective_score(n_nets, connections, length, cp, lp):
+    """ calculates score for multi objective function evaluation score
+
+    :param connections: number of connected nets
+    :param length: tot length of nets on the circuit
+    :param cp: connection part
+    :param lp: length part
+    :return:
+    """
+    raise(NotImplementedError)
 
 def split_score(combination):
     """ splits score into connections & length component
@@ -214,16 +213,16 @@ def get_name_circuitfile(gridnum, x, y, tot_gates):
         y) + "g" + str(tot_gates) + ".csv"
 
 
-def create_data_directory(main_subdir, gridnum, x, y, tot_gates, listnum, additions, ask=True):
+def create_data_directory(main_subdir, gridnum, x, y, tot_gates, listnum, version_specs, dir_specs, Func_specs, ask=True):
     gridfn = get_name_circuitfile(gridnum, x, y, tot_gates)
     netfn = get_name_netfile(gridnum, listnum)
-    print(additions)
-    new_subdir = '_'.join(additions) + '_' + gridfn[:-4] + "_" + netfn
-    rel_path = os.path.join(main_subdir, new_subdir)
+    print(Func_specs)
+    grid_net_subdir = gridfn[:-4] + "_" + netfn[:-4] + ' - ' + version_specs + ' - ' + '_'.join(dir_specs)
+    rel_path = os.path.join(main_subdir, grid_net_subdir)
     script_dir = os.path.dirname(__file__)
     dir_check_path = os.path.join(script_dir, rel_path)
     if ask:
-        ans = input("current additions are as follows:" + str(additions) + "does this match what you are trying to record? (Y/n)")
+        ans = input("current additions are as follows:" + str(Func_specs) + "does this match what you are trying to record? (Y/n)")
         while True:
             if ans == 'Y':
                 break
@@ -237,6 +236,7 @@ def create_data_directory(main_subdir, gridnum, x, y, tot_gates, listnum, additi
         os.mkdir(dir_check_path)
         copy(create_fpath(main_subdir,gridfn), os.path.join(dir_check_path, gridfn))
         copy(create_fpath(main_subdir,netfn), os.path.join(dir_check_path, netfn))
+        lwrite_specs(dir_check_path, Func_specs)
     else:
         ans = input("Continuing will append pre-recorded data\nContinue? (Y/n)")
         while True:
@@ -248,7 +248,7 @@ def create_data_directory(main_subdir, gridnum, x, y, tot_gates, listnum, additi
             else:
                 print('invalid answer, did you perhaps not enter the capital "Y"?')
                 ans = input("Continuing will append pre-recorded data\nContinue? (Y/n)")
-    return os.path.join(dir_check_path, 'data ' + '_'.join(additions) + '.tsv')
+    return os.path.join(dir_check_path, 'data ' + '_'.join(Func_specs) + '.tsv')
 
 
 def get_subdirs(a_dir):
@@ -260,6 +260,10 @@ def get_res_subdirs(a_dir):
     _list = [name for name in os.listdir(a_dir) if (name[-3:] not in forbidden)]
     return _list
 
+
+###############################################################################
+#  Circuit Generating                                                        #
+###############################################################################
 
 def gates_from_lol(lol):
     """
@@ -363,7 +367,7 @@ def neighbours(coords):
 
 
 ###############################################################################
-#  funcs for printing                                                         #
+#  funcs for printing & writing                                               #
 ###############################################################################
 
 
@@ -439,4 +443,9 @@ def write_connections_length(filename, con_len_list):
     with open(filename, 'a') as f:
         f.write(w_str)
         f.write('\n')
+
+def lwrite_specs(subdir, additions):
+    with open(os.path.join(subdir, "verbose_specs.text"), 'w') as wf:
+        for spec in additions:
+            wf.write(spec+'\n')
 

@@ -251,9 +251,7 @@ def create_model(titlestring="", height=None, order=None, ordlength=None, select
 
 
 def create_base_model(titlestring, select=False, save_name="bottom layer model.png"):
-
-    g_coords, _, _= get_circuit_basics(GRIDNUM, NL_NUM, X,
-                                                           Y, G, [])
+    g_coords, _, _= get_circuit_basics(GRIDNUM, NL_NUM, X, Y, G, [])
     plot_circuit([], [], g_coords, False, select, X, Y, save_name, alt_title=titlestring)
 
 
@@ -266,7 +264,6 @@ def create_model_gif(subdir, select=False, height=None, order=None, ordlength=No
 
             c_save_name = save_name + str(i).zfill(5) + ".png"
             c_save_name = create_fpath(subdir, c_save_name)
-
             plot_circuit(build_paths[i], order, g_coords, height, X, Y, select, c_save_name, alt_title=" ", resize=resize)
 
     with imageio.get_writer(os.path.join(subdir,'model_gif.gif'), mode='I', subrectangles=True) as writer:

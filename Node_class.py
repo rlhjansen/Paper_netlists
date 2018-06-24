@@ -115,7 +115,8 @@ class Node:
         self.neighbours = list(neighbours)
         self.neighbour_num = len(neighbours)
 
-    def satisfies_height_ele(self, h):
+
+    def satisfies_height(self, h):
         """
         :param h: height not to be surpassed
         :return: True if the height part of the node coordinate is lower or
@@ -125,6 +126,8 @@ class Node:
             return True
         else:
             return False
+
+
 
     def remove_out_nets(self):
         """

@@ -3,19 +3,25 @@ import os
 from random import randint, shuffle, random
 import queue as Q
 
-from independent_functions import neighbours,transform_print, params_inp, manhattan, create_fpath, swap_up_to_x_elems, read_grid, gates_from_lol
+from independent_functions import \
+    neighbours, \
+    transform_print, \
+    params_inp, \
+    manhattan, \
+    create_fpath, \
+    swap_up_to_x_elems, \
+    read_grid, \
+    gates_from_lol
+
 from Node_class import Node
 
 
-
-
-
 class Grid:
-    def __init__(self, size_params, gates, nets, _print=False, empty=False, AH=False):
+    def __init__(self, size_params, gates, nets, solver="A_star", height=7,_print=False, empty=False, AH=False):
 
         # initialize the grid basics
         self.AH = AH
-        self.params = size_params + [7]  # parameters of the grid
+        self.params = size_params + [height]  # parameters of the grid
         self.platform_params = size_params
         self.gate_number = gates  # number of total gates
         self.net_number = nets
@@ -29,30 +35,39 @@ class Grid:
         self.wire_locs = set()
         self.griddict = {n:Node(n, '0') for n in params_inp(self.params)}
         self.connect()
+        self.allowed_height = 0
+
+        # elevator
+        self.wire_loc_dict = dict()
+        self.unsolved_nets = set()
+        self.net_paths = {}
+        self.height = height
+
 
         # Place gates on the grid
         if empty:
             pass
         else:
             if type(gates) == int:
-                print("starting to generate gates")
                 self.generate_gates(gates)
-                print("done generating gates")
             elif type(gates) == tuple:
-                print("### placing read gates ###")
                 self.place_premade_gates(gates)
             if type(nets) == int:
-                print("start generating nets")
                 self.generate_nets(nets)
-                print("end generatin nets")
 
-        # for printing everything, smaller values don't overflow the terminal output
-        if _print:
-            print(self.gate_coords.keys())
-            print(self.gate_coords.values())
-            print(self.connections.keys())
-            print(self.connections.values())
+        if solver == "A_star":
+            self.solve = self.solve_order
+        elif solver == "elevator":
+            self.solve = self.solve_order_daal_ele
 
+    def set_solver(self, solver):
+        if solver == "A_star":
+            self.solve = self.solve_order
+        elif solver == "elevator":
+            self.solve = self.solve_order_daal_ele
+        else:
+            raise NotImplementedError("no solver with the name '" + solver +
+                                      "' implemented\nTry using 'A_star' or 'elevator'")
 
     ### Gate functions ###
     def write_grid(self, fname):
@@ -157,6 +172,10 @@ class Grid:
         self.gate_net[gate2].add(n_str)
         self.nets[n_str] = (gate1, gate2)
 
+        # elevator
+        self.wire_loc_dict[n_str] = set()
+
+
 
 
 
@@ -248,6 +267,7 @@ class Grid:
         for spot in self.wire_locs:
             self.griddict[spot].remove_net()
         self.wire_locs = set()
+        self.allowed_height = 0
 
     def reset_nets_daal(self):
         """
@@ -258,8 +278,6 @@ class Grid:
         for coord in self.coord_gate.keys():
             self.griddict[coord].reset_cur_outgoing()
         self.wire_locs = set()
-
-
 
 
     ###########################
@@ -276,71 +294,324 @@ class Grid:
                 complete.append(" ".join(transformed_vals))
         return "\n".join(complete)
 
-
-
     ###########################
     ###### sorting block ######
     ###########################
 
+    def extract_route(self, path_dict, end_loc):
+        path = ((),)
+        get_loc = path_dict.get(end_loc)[0]
+        for key, value in path_dict.items():
+            #print("k", key, "v", value)
+            pass
+        while path_dict.get(get_loc)[0] != get_loc:
+            path = path + (get_loc,)
+            get_loc = path_dict.get(get_loc)[0]
+        return path[::-1]
+
     def A_star(self, net):
         """ finds a path for a net with A-star algorithm, quits searching early if the end-gate is closed off by its immediate neighbourse.
 
-        :param net:
+        :param net: gate-pair (gX, gY)
         :return: path, length if path founde, else false, false
         """
+
         q = Q.PriorityQueue()
-        steps = 0
+
+        count = 0
         end_loc = self.gate_coords.get(self.net_gate.get(net)[1])
         if self.griddict.get(end_loc).is_blocked_in():
-            return False, False
+            return False, False, count
+
+        start_loc = self.gate_coords.get(self.net_gate.get(net)[0])
+        path = ((start_loc),)
+        manh_d = manhattan(path[-1], end_loc)
+        q.put((manh_d, 0, start_loc))
+        visited = dict()
+        visited[start_loc] = [start_loc, 0]
+        while not q.empty():
+            count += 1
+            k = q.get()
+            #print(k)
+            _, steps, current = k
+            for neighbour in self.griddict.get(current).get_neighbours():
+                n_coord = neighbour.get_coord()
+
+                if neighbour.is_occupied():
+                    if n_coord == end_loc:
+                        visited[n_coord] = [current, steps]
+                        return self.extract_route(visited, n_coord), \
+                               visited.get(end_loc)[1], count
+                    else:
+                        continue
+                #print(k, n_coord)
+                if n_coord in visited:
+                    if visited.get(n_coord)[1] > steps:
+                        visited[n_coord] = [current, steps]
+                        q.put((manhattan(n_coord, end_loc) + steps + 1, steps + 1,
+                          n_coord))
+                else:
+                    visited[n_coord] = [current, steps]
+                    q.put((manhattan(n_coord, end_loc) + steps + 1, steps + 1,
+                           n_coord))
+        #print("no path found")
+        return False, False, count
+
+
+    def O_A_star(self, net):
+        """ finds a path for a net with A-star algorithm, quits searching early if the end-gate is closed off by its immediate neighbourse.
+
+        :param net: gate-pair (gX, gY)
+        :return: path, length if path founde, else false, false
+        """
+
+        q = Q.PriorityQueue()
+        steps = 0
+        count = 0
+        end_loc = self.gate_coords.get(self.net_gate.get(net)[1])
+        if self.griddict.get(end_loc).is_blocked_in():
+            return False, False, count
         start_loc = self.gate_coords.get(self.net_gate.get(net)[0])
         path = ((start_loc),)
         manh_d = manhattan(path[-1], end_loc)
         q.put((manh_d + steps, steps, path),)
         visited = set()
-        count = 0
         while not q.empty():
             count += 1
             _, steps, path = q.get()
             for n in self.griddict.get(path[-1]).get_neighbours():
-                if n.is_occupied():
-                    if not n.get_coord() == end_loc:
-                        continue
-
                 new_coord = n.get_coord()
-                manh_d = manhattan(new_coord, end_loc)
-                if manh_d == 0:
-                    return path + (new_coord,), steps + 1
+                if new_coord[2] > self.allowed_height:
+                    continue
                 if new_coord in visited:
                     continue
                 else:
+                    if n.is_occupied():
+                        if not n.get_coord() == end_loc:
+                            continue
+                    manh_d = manhattan(new_coord, end_loc)
+                    if manh_d == 0:
+                        path = path + (new_coord,)
+                        for coord in path:
+                            if coord[2] == self.allowed_height:
+                                self.allowed_height += 1
+                                break
+                        return path, steps + 1, count
                     q.put((manh_d + steps, steps + 1, path + (new_coord,)),)
                     visited.add(new_coord)
-        return False, False  # No Path found
-
-
+        return False, False, count  # No Path found
 
 
     def solve_order(self, net_order, _print=False, reset=True):
         tot_length = 0
         solved = 0
         nets_solved = []
+        tries = 0
         for net in net_order:
-            path, length = self.A_star(net)
+            path, length, ntries = self.A_star(net)
+            tries += ntries
             if path:
-                Err = self.place(net, path, length)
+                Err = self.place(net, path)
                 if Err:
                     print("encountered error in placement")
-                    return False
+                    print(path)
+                    exit(1)
                 solved += 1
                 tot_length += length
                 nets_solved.append(net)
-        print(solved, tot_length, nets_solved)
+
+        print("*", solved, tot_length, nets_solved)
         if _print:
             print(self)
         if reset:
             self.reset_nets()
-        return solved, tot_length
+        return solved, tot_length, tries, True
+
+
+    def solve_order_daal_ele(self, net_order):
+        """ Solver with elevator
+
+        :param net_order: Order to lay search for solutions per net.
+        :return highest: Highest point where a net lies.
+        :return tot_length: Total length of the path of all nets.
+        :return new_order: Net order if could initially be placed, otherwise
+        the new order is returned.
+        """
+        tot_length = 0
+        solved = 0
+        new_order = net_order[:]
+        tries = 0
+        h = 0
+        self.reset_nets_daal_ele()
+
+        unplaced = set(net_order[:])
+        for net in new_order:
+            if self.pre_place_net(net):
+                unplaced.remove(net)
+            else:
+                self.unsolved_nets.remove(net)
+
+        while self.unsolved_nets:
+            for net in new_order:
+                if net not in self.unsolved_nets:
+                    continue
+                check = self.a_star_ele(net, h)
+                if not check[0]:
+                    tries += check[1]
+                    continue
+                path, length, count = check
+                tot_length += length
+                tries += count
+                if path:
+                    Err = self.place(net, path)
+                    if Err:
+                        print("exit from placement")
+                        exit(4)
+                    else:
+                        solved += 1
+                        self.unsolved_nets.remove(net)
+            h += 1
+            extra_length, valid = self.elevate_unsolved(h)
+            tot_length += extra_length
+            if not valid:
+                print(self)
+                input()
+                return len(net_order) - len(unplaced), tot_length, tries
+        print("*", solved, tot_length,)
+
+        return len(net_order) - len(unplaced), tot_length, tries
+
+
+    def pre_place_net(self, net):
+        start_loc = self.gate_coords.get(self.net_gate.get(net)[0])
+        end_loc = self.gate_coords.get(self.net_gate.get(net)[1])
+        self.unsolved_nets.add(net)
+        start = False
+        end = False
+        temp_net_path = []
+        for n in self.griddict.get(start_loc).get_neighbours():
+            if not n.is_occupied():
+                free_coord = n.get_coord()
+                manh_d = manhattan(free_coord, end_loc)
+                temp_net_path = [manh_d+1, 1, (start_loc,free_coord,),]
+                self.griddict[free_coord].set_value(net)
+                self.wire_loc_dict[net].add(free_coord)
+                start = True
+                break
+        # end
+        for n in self.griddict.get(end_loc).get_neighbours():
+            if not n.is_occupied():
+                free_end_coord = n.get_coord()
+                temp_net_path.append((free_end_coord,))
+                self.griddict[free_end_coord].set_value(net)
+                self.wire_loc_dict[net].add(free_end_coord)
+                end = True
+                break
+        if start and end:
+            self.net_paths[net] = tuple(temp_net_path)
+            return True
+        else:
+            return False
+
+    def reset_nets_daal_ele(self):
+        """
+        retains netlist connections but resets their placement
+        """
+        for netk in self.wire_loc_dict.keys():
+            self.reset_single_net(netk)
+        for coord in self.coord_gate.keys():
+            self.griddict[coord].reset_cur_outgoing()
+        for spot in self.wire_locs:
+            self.griddict[spot].remove_net()
+            pass
+
+        self.wire_locs = set()
+        self.unsolved = set()
+
+    def reset_single_net(self, netk):
+        for coord in self.wire_loc_dict.get(netk):
+            self.griddict[coord].remove_net()
+        self.wire_loc_dict[netk] = set()
+
+    def elevate_net(self, net, height):
+        net_path = list(self.net_paths.get(net))
+        manh_steps, steps, coord_path, end_path = net_path
+
+        tlcoord_path, tncoord = self.elevate_path_to_H(coord_path, height)
+
+        tlend_path, tnend = self.elevate_path_to_H(end_path, height)
+        self.net_paths[net] = tuple((
+            manh_steps + 1, steps + 1, tlcoord_path, tlend_path))
+        if len(self.net_paths[net]) == 1:
+            exit(-1)
+        self.wire_loc_dict[net].add(tncoord)
+        self.griddict[tncoord].set_value(net)
+        self.wire_loc_dict[net].add(tnend)
+        self.griddict[tnend].set_value(net)
+
+    def elevate_path_to_H(self, coord_path, height):
+        lcoordpath = list(coord_path)
+
+        ncoord = list(lcoordpath[-1])
+        ncoord[2] = height
+        tncoord = tuple(ncoord)
+        lcoordpath.append(tncoord)
+        tlcoord_path = tuple(lcoordpath)
+        return tlcoord_path, tncoord
+
+    def elevate_unsolved(self, height):
+        if height >= self.height:
+            return 1000, False
+        for net in self.unsolved_nets:
+            self.elevate_net(net, height)
+        return len(self.unsolved_nets)*2, True
+
+    def a_star_ele(self, net, h):
+        q = Q.PriorityQueue()
+        count = 0
+        visited = dict()
+
+        path_tuples = self.net_paths.get(net, False)
+        if not path_tuples:
+            return False, False, count
+
+        _, steps, path, end_path = path_tuples
+
+        start_loc = path[-1]
+        end_loc = end_path[-1]
+        manh_d = manhattan(path[-1], end_loc)
+        q.put((manh_d, 0, start_loc))
+        visited[start_loc] = [start_loc, 0]
+
+        while not q.empty():
+            count += 1
+            _, steps, current = q.get()
+
+            for neighbour in self.griddict.get(current).get_neighbours():
+                n_coord = neighbour.get_coord()
+
+                if neighbour.is_occupied():
+                    if n_coord == end_loc:
+                        visited[end_loc] = [current, steps]
+                        return self.extract_route(visited, end_loc), \
+                               visited.get(end_loc)[1], count
+                    else:
+                        continue
+
+                if n_coord[2] <= h:
+                    if n_coord in visited:
+                        if visited.get(n_coord)[1] > steps:
+                            visited[n_coord] = [current, steps]
+                            q.put((manhattan(n_coord, end_loc) + steps + 1,
+                                   steps + 1,
+                                   n_coord))
+                    else:
+                        visited[n_coord] = [current, steps]
+                        q.put((manhattan(n_coord, end_loc) + steps + 1,
+                               steps + 1,
+                               n_coord))
+        return False, False, count
+
 
     def get_solution_placement(self, net_order):
         paths = []
@@ -348,27 +619,22 @@ class Grid:
             path, length = self.A_star(net)
             if path:
                 paths.append(path)
-                Err = self.place(net, path, length)
+                Err = self.place(net, path)
             else:
                 paths.append( ((),))
         self.reset_nets()
         return paths
 
 
-
-    def place(self, net, path, length):
-        for spot in path[1:-1]:
+    def place(self, net, path):
+        for spot in path[:-1]:
             if self.griddict[spot].set_value(net):
                 self.wire_locs.add(spot)
-                continue
             else:
                 print("WRONG SPOT M8 :^^^^)")
                 return True
         return False
 
-    def get_results(self, order):
-        self.reset_nets()
-        return self.solve_order(order), [i[1:] for i in order]
 
 
 ###############################################################################
@@ -394,7 +660,7 @@ def SXHC(gridfile, subdir, netfile, consecutive_swaps):
     return G, cur_orders, tot_nets
 
 
-def SPPA(gridfile, subdir, netfile, batchsize, ref_pop=None):
+def SPPA(gridfile, subdir, netfile, height, batchsize, solver, ref_pop=None, gridcopies=1):
     """
     :param gridfile: filename of circuit
     :param subdir: subdirectory in which files are located
@@ -403,36 +669,19 @@ def SPPA(gridfile, subdir, netfile, batchsize, ref_pop=None):
     :param height: maximum allowed height for solution finding
     :return: starting parameters for the solver
     """
-    gridfile = create_fpath(subdir, gridfile)
-    G = file_to_grid(gridfile, None)
-    G.read_nets(subdir, netfile)
+    grids = []
+    for i in range(gridcopies):
+        gridfile = create_fpath(subdir, gridfile)
+        G = file_to_grid(gridfile, None, height)
+        G.read_nets(subdir, netfile)
+        G.set_solver(solver)
+        grids.append(G)
     if ref_pop:
         first_batch = ref_pop
     else:
         first_batch = [G.get_random_net_order() for _ in range(batchsize)]
     tot_nets = len(first_batch[0])
-    return G, first_batch, tot_nets
-
-
-def S_FI_PPA(gridfile, subdir, netfile, batchsize, ref_pop=None):
-    """
-    :param gridfile: filename of circuit
-    :param subdir: subdirectory in which files are located
-    :param netfile: filename of circuit
-    :param batchsize: initial population size
-    :param height: maximum allowed height for solution finding
-    :return: starting parameters for the solver
-    """
-    gridfile = create_fpath(subdir, gridfile)
-    G = file_to_grid(gridfile, None)
-    G.read_nets(subdir, netfile)
-    netlist_len = len(G.get_random_net_order())
-    if ref_pop:
-        first_batch = ref_pop
-    else:
-        first_batch = [[random() for _ in range(netlist_len)] for _ in range(batchsize)]
-    tot_nets = len(first_batch[0])
-    return G, first_batch, tot_nets
+    return grids, first_batch, tot_nets
 
 
 def SRC(gridfile, subdir, netfile):
@@ -450,14 +699,15 @@ def SRC(gridfile, subdir, netfile):
     return G, cur_order, tot_nets
 
 
-def file_to_grid(fpath, nets):
+def file_to_grid(fpath, nets, height):
     """
     :param nets: either a netlist or a number of nets
     :return: a new Grid
     """
+    print(fpath)
     base = read_grid(fpath)
     xlen = len(base[0])
     ylen = len(base)
     gate_coords, gates = gates_from_lol(base)
-    Newgrid = Grid([xlen, ylen], (gate_coords, gates), nets)
+    Newgrid = Grid([xlen, ylen], (gate_coords, gates), nets, height=height)
     return Newgrid
