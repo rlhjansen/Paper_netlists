@@ -1,20 +1,21 @@
-""" Program to acquire data, config near the bottom (ln. 850~ish)
+""" Program to acquire data, config near the bottom (ln. 650~ish)
 
 """
 
 from random import random
 from math import exp, log, tanh, ceil
 
-from Gridfile import SXHC, SPPA, SRC, file_to_grid
+from Gridfile import SXHC, SPPA, SRC
 from independent_functions import \
-    create_fpath, \
     create_data_directory, \
     combine_score, \
     get_name_circuitfile, \
     get_name_netfile, \
+    multi_objective_score, \
     print_start_iter, \
     print_final_state, \
     quicksort, \
+    score_connect_only, \
     split_score, \
     swap_two_X_times, \
     write_connections_length, \
@@ -420,7 +421,7 @@ class PPA:
 
     for info check the original paper by Salhi and Frage
     """
-    def __init__(self, subdir, grid_num, net_num, x, y, g, max_generations, additions=[], elitism=0, pop_cut=20, max_runners=4, ref_pop=None, ask=True):
+    def __init__(self, subdir, grid_num, net_num, x, y, g, max_generations, version_specs=[], height=7, elitism=0, pop_cut=20, max_runners=5, max_distance=5, objective_function_value=False, multi_objective_distribution=False, ref_pop=None, workercount=1, ask=True, solvertype="Astar"):
         """
 
         :param subdir: Subdirectory name where files are located
@@ -434,6 +435,15 @@ class PPA:
         :param pop_cut: X best of a generation who will have offspring
         :param max_runners: maximum amount of child solution sets produced by
             one parent.
+        :param combined: fitness based on combined score (integer & decimal part)
+        :param multi_objective: fitness based on [0.X, 0.Y] percentages for
+            multi optimization X for connections, Y for length
+        :param connect_only: fitness based on number of connections only
+        :param workercount: so far this is only for multiple grid creation.
+            multiple grids need be created as pythons deepcopy is unable to
+            handle highly linked objects (the grid) due to recursiondepth/implementation
+
+            NOTE - Nothing concerning multiprocessing has yet been done.
         """
         gridfile = get_name_circuitfile(grid_num, x, y, g)
         netfile = get_name_netfile(grid_num, net_num)
@@ -443,22 +453,66 @@ class PPA:
         self.gens = max_generations
         self.pop_cut = pop_cut
         self.max_runners = max_runners
+        self.max_distance = max_distance
 
-        G, initial_pop, all_nets = SPPA(gridfile, subdir, netfile, pop_cut,
-                                        ref_pop=ref_pop)
+        Gs, initial_pop, all_nets = SPPA(gridfile, subdir, netfile, height, pop_cut,
+                                        solvertype, gridcopies=workercount, ref_pop=ref_pop)
+
         self.pop = initial_pop
         self.tot_nets = all_nets
-        self.G = G
+        self.Gs = Gs
         self.last_pop = tuple((),)
         self.last_scores = tuple((),)
-        FUNC_PARAMS = ["PPA",
-                       "pop" + str(pop_cut),
-                       "max_runners" + str(max_runners),
-                       "elitism" + str(elitism),
-                       "generations" + str(max_generations)]
-        FUNC_PARAMS = additions+FUNC_PARAMS
+        self.solvertype = solvertype
+        self.objective_function_value = objective_function_value
+
+        func_params, dir_specs = self.param_to_specs()
+
+        if multi_objective_distribution:
+            func_params.append("multi_objective_distribution" + str('+'.join(multi_objective_distribution)))
+            dir_specs.append("mod" + str('+'.join(multi_objective_distribution)))
+
+        if objective_function_value:
+            if objective_function_value == "combined":
+                self.ofv = combine_score
+            elif objective_function_value == "multi_objective":
+                if multi_objective_distribution:
+                    self.ofv = multi_objective_score
+                    self.mod = multi_objective_distribution
+                else:
+                    print("no distribution for multi objective function specified input i.e.\n, multi_objective_distribution=[0.5, 0.5]")
+                    exit()
+            elif objective_function_value == "connect_only":
+                self.ofv = score_connect_only
+
+        else:
+            print("no optimization method selected (combined, connect_only, multi_objective)")
+            exit()
+
+
         self.savefile = create_data_directory(subdir, grid_num, x, y,
-                                              g, net_num, FUNC_PARAMS, ask=ask)
+                                              g, net_num, version_specs, dir_specs, func_params, ask=ask)
+
+
+    def param_to_specs(self):
+        FUNC_PARAMS = ["PPA",
+                       self.solvertype,
+                       "pop" + str(self.pop_cut),
+                       "max_runners" + str(self.max_runners),
+                       "max_distance" + str(self.max_distance),
+                       "elitism" + str(self.elitism),
+                       "generations" + str(self.gens),
+                       "objective function" + str(self.objective_function_value)]
+
+        dir_specs = ["PPA",
+                      self.solvertype[:2],
+                      "p" + str(self.pop_cut),
+                      "mr" + str(self.max_runners),
+                      "md" + str(self.max_distance),
+                      "e" + str(self.elitism),
+                      "g" + str(self.gens),
+                      "ofv-" + str(self.objective_function_value)]
+        return FUNC_PARAMS, dir_specs
 
     def fitnesses_to_newpop(self, scores, orders):
         """ runners & distances from original paper by Salhi & Fraga
@@ -543,7 +597,7 @@ class PPA:
         """
 
         qslen = len(qslist)
-        scores = tuple([combine_score(qslist[i][0], qslist[i][1]) for i in range(qslen)])
+        scores = tuple([self.ofv(self.tot_nets, qslist[i][0], qslist[i][1], 0, 0) for i in range(qslen)])
         orderlist = tuple([qslist[i][2] for i in range(qslen)])
 
         tot = self.combine_old_new(scores, orderlist)
@@ -551,8 +605,9 @@ class PPA:
         plant_orders = tot[1][:self.pop_cut]
         best_con, best_len = split_score(plant_scores[0])
 
-        self.last_pop = tot[1][:self.elitism]
-        self.last_scores = tuple(tot[0][:self.elitism])
+
+        self.last_pop = tot[1]
+        self.last_scores = tuple(tot[0])
 
         zMax = max(plant_scores)
         zMin = min(plant_scores)
@@ -568,17 +623,66 @@ class PPA:
         self.sol_len = best_len
 
 
+    def run_selamoglu(self, best_percent, arbitrairy):
+        """ See paper Selamoglu & Salhi:
+
+        The Plant Propagation Algorithm for Discrete Optimisation:
+            The Case of the Travelling Salesman Problem
+
+
+        :param best_percent: best X percent get close runners
+            proportional to arbitrary
+        :param arbitrairy: dependency for close runners
+        Optional:
+        :return:
+
+        (Note, looks like multiple paralel hillclimbers)
+        """
+        #Todo customize saving to view how plants propagate
+        #Todo tournament based fitness?
+        #Todo Distance function implementation
+
+        for i in range(ceil(self.pop_cut * best_percent)):
+            new_ords = [self.distancefunc(self.pop[i], 1) for _ in range(arbitrary/(i+1))]
+            for new_ord in new_ords:
+                cur_conn, cur_len = self.Gs[0].solve_order(new_ord)
+                runner_eval = combine_score(cur_conn, cur_len)
+                write_connections_length(self.savefile, [
+                    [(cur_conn, cur_len), new_ord]])
+
+                if runner_eval > self.pop_score[i]:
+                    self.pop[i], self.pop_score[i] = new_ord, runner_eval
+
+        for i in range(ceil(self.pop_cut*best_percent), self.pop_cut, 1):
+            new_ord = self.distancefunc(self.pop[i],self.max_runners)
+            cur_conn, cur_len = self.Gs[0].solve_order(new_ord)
+            runner_eval = combine_score(cur_conn, cur_len)
+            write_connections_length(self.savefile, [
+                [(cur_conn, cur_len), new_ord]])
+
+            if runner_eval > self.pop_score[i]:
+                self.pop[i], self.pop_score[i] = new_ord, runner_eval
 
     def run_algorithm(self):
         """main loop, generates evaluates & saves "plants" per generation.
 
         """
+        #Todo custimize option for connections and or length, length divider as well (quicksort adaption)
+        #Todo customize option to save amount of swaps with kwarg
+        #Todo tournament based fitness? - not for now
+        #Todo Distance function implementation (swap, reverse, other)
+
+        print(self.Gs[0])
+
         for i in range(self.gens):
             print_start_iter(self.gn, self.nn, "Plant Propagation", i+1)
             data_clo = []  # conn, len, order
             for j, cur_ord in enumerate(self.pop):
-                satisfies = self.G.solve_order(cur_ord)
-                cur_conn, cur_len = satisfies
+                print("net order", j)
+                satisfies = self.Gs[0].solve(cur_ord)
+                print("satisfies", satisfies)
+                cur_conn, cur_len, tot_tries = satisfies
+                print("total configs tried:", tot_tries)
                 data_clo.append((cur_conn, cur_len, tuple(cur_ord)))
                 write_connections_length(self.savefile, [
                     [(cur_conn, cur_len), cur_ord]])
@@ -587,11 +691,11 @@ class PPA:
             self.sol_len = qslist[1]
             self.populate(qslist[:self.pop_cut])
 
-            self.G.solve_order(self.last_pop[0], _print=True)
+            self.Gs[0].solve_order(self.last_pop[0], _print=True)
             print("Current best path =\t", self.sol_ord,
                   "\nCurrent best length =\t", self.sol_len)
 
-        self.G.solve_order(self.last_pop[0], _print=True)
+        self.Gs[0].solve_order(self.last_pop[0], _print=True)
         print("Final Path =\t", self.last_pop[0], "\nFinal Length =\t",
               self.sol_len)
 
@@ -604,12 +708,38 @@ class PPA:
 #General
 ASK = False
 
-GRIDNUM = 0
+
+"""
+# created
+GRIDNUMS = [0]
 NETLISTNUMS = [1]
-X = 30
-Y = 30
-G = 100
+Xs = [30]
+Ys = [30]
+Gs = [100]
 NETL_LEN = 100
+
+RC_ADDITION = ["random collector", "TEST_A-star, " + str(NETL_LEN) + "_length NL"]
+HC_ADDITION = ["Hillclimber", "A-star, " +str(NETL_LEN) + "_length NL"]
+SA_LEN_ADDITION = ["Simulated Annealing Len", "A-star, " +str(NETL_LEN) + "_length NL"]
+SA_CONN_ADDITION = ["Simulated Annealing Con", "A-star, " +str(NETL_LEN) + "_length NL"]
+SA_ALL_ADDITION = ["Simulated Annealing ConLen", "A-star, " +str(NETL_LEN) + "_length NL"]
+"""
+
+# Heuristics case
+GRIDNUMS = [1, 2]
+#GRIDNUMS = [2]
+
+NETLIST_NUMS = [1,2,3]
+#NETLIST_NUMS = [3]
+
+Xs = [18, 18]
+#Xs = [18]
+
+Ys = [13, 17]
+#Ys = [17]
+
+Gs = [25, 50]
+#Gs = [50]
 
 #RC
 BATCHES = 100
@@ -623,51 +753,31 @@ GENERATIONS = 120
 ELITISM = 30
 POP_CUT = 30
 MAX_RUNNERS = 5
+MAX_DISTANCE = MAX_RUNNERS
 
-SUBDIR_OLD = "circuit_map_git_swap_always_2"  # <-- bad data
-SUBDIR_NEW = "circuit_map_git_swap_two_X_times"
+#SUBDIR_OLD = "circuit_map_git_swap_always_2"  # <-- bad data
+#SUBDIR_NEW = "circuit_map_git_swap_two_X_times"
+SUBDIR_EXP = "Experimental_map"
+SUBDIR_HEUR = "heuristics_baseline_circuits"
 
-
+SOLVER = "elevator"
 
 #Todo SA possible with different values to anneal con & len
 ANN_FUNC_PARAMS_LEN = ["length", "geman", 700, 10, None, None]
 ANN_FUNC_PARAMS_CONN = ["connections", "geman", None, None, 100, 1]
 ANN_FUNC_PARAMS_BOTH = ["all", "geman", 700, 10, 100, 1]
 
-RC_ADDITION = ["random collector", "TEST_A-star, " + str(NETL_LEN) + "_length NL"]
-HC_ADDITION = ["Hillclimber", "A-star, " +str(NETL_LEN) + "_length NL"]
-SA_LEN_ADDITION = ["Simulated Annealing Len", "A-star, " +str(NETL_LEN) + "_length NL"]
-SA_CONN_ADDITION = ["Simulated Annealing Con", "A-star, " +str(NETL_LEN) + "_length NL"]
-SA_ALL_ADDITION = ["Simulated Annealing ConLen", "A-star, " +str(NETL_LEN) + "_length NL"]
 
 
 if __name__ == '__main__':
-    for NETLIST_NUM in NETLISTNUMS:
-        for i in range(10):
-            if False:
-                rc = RC(SUBDIR_NEW, GRIDNUM, NETLIST_NUM, X, Y, G, RC_ADDITION, BATCHES, ask=ASK)
-                rc.run_algorithm()
-            if False:
-                #subdir, grid_num, net_num, x, y, tot_gates,consec_swaps, iterations, addition
-                hc = HC(SUBDIR_NEW, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
-                        HC_ADDITION+[', VR3.' +str(i) + '_'], ask=ASK)
-
-                hc.run_algorithm()
-            if False:  #SA length
-                sa = SA(SUBDIR_NEW, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
-                        ANN_FUNC_PARAMS_BOTH, SA_LEN_ADDITION, ask=ASK)
-                sa.run_algorithm()
-            if False:  #SA connections
-                sa = SA(SUBDIR_NEW, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
-                        ANN_FUNC_PARAMS_BOTH, SA_CONN_ADDITION, ask=ASK)
-                sa.run_algorithm()
-            if False:  #SA all
-                sa = SA(SUBDIR_NEW, GRIDNUM, NETLIST_NUM, X, Y, G, CONSEC_SWAPS, ITERATIONS,
-                        ANN_FUNC_PARAMS_BOTH, SA_ALL_ADDITION, ask=ASK)
-                sa.run_algorithm()
-            if True:   # PPA standard
-                ppa = PPA(SUBDIR_NEW, GRIDNUM, NETLIST_NUM, X, Y, G, GENERATIONS,
-                          additions=['VR1.' +str(i) + '_'], elitism=ELITISM,
-                          pop_cut=POP_CUT, max_runners=MAX_RUNNERS, ask=ASK)
-                ppa.run_algorithm()
+    for j in range(10):
+        for ig, k in enumerate(GRIDNUMS):
+            for i, NETLIST_NUM in enumerate(NETLIST_NUMS):
+                if True:   # PPA standard
+                    ppa = PPA(SUBDIR_HEUR, GRIDNUMS[ig], NETLIST_NUM, Xs[ig], Ys[ig], Gs[ig], GENERATIONS,
+                              version_specs='VR1.' +str(j) + '_', elitism=ELITISM,
+                              pop_cut=POP_CUT, max_runners=MAX_RUNNERS, max_distance=MAX_DISTANCE,
+                              objective_function_value="combined", ask=ASK, height=20, workercount=5,
+                              solvertype="elevator")
+                    ppa.run_algorithm()
 

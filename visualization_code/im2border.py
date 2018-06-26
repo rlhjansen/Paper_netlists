@@ -1,21 +1,10 @@
 
 
-from PIL import Image, ImageDraw, ImageFont
-import numpy as np
-from scipy.misc import toimage
+from PIL import Image, ImageDraw
 
 
-
-#chars = np.asarray(list("$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,^`'. "))
-chars = np.asarray(list("@B%8&WM#ZO0QCLJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!;:,^`'. "))
 xdif = 7
 ydif = 18
-
-GCF = 0.1
-
-
-
-
 
 
 def to_border(f, fromedge):
@@ -29,4 +18,4 @@ def to_border(f, fromedge):
     img.save("bordered_image.png")
 
 
-to_border("background_image.jpg", 50)
+to_border("achtergrond_cropped.png", 20)

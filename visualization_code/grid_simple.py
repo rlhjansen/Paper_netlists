@@ -1,9 +1,6 @@
 from PIL import Image, ImageDraw, ImageFont
 
 
-from PIL import Image, ImageDraw
-
-
 def new_base(x,y):
     img = Image.new('RGBA', (x, y))
     return img

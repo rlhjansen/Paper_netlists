@@ -10,7 +10,7 @@
 
 ## zoektermen ##
  - VLSI optimization
-
+ - Integrated circuit
 
 ## Papers/naslagwerk ##
  - synthesis and optimization of digital circuits
