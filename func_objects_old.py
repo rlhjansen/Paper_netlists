@@ -678,12 +678,15 @@ class PPA:
         for i in range(self.gens):
             print_start_iter(self.gn, self.nn, "Plant Propagation", i+1)
             data_clo = []  # conn, len, order
-            pool = mp.Pool(processes=None)
-            data_clo = pool.map(self.multi_run, [j for j in range(len(self.pop))])
-            # data_clo = [pool.apply(self.multi_run, args=(x,)) for x in range(len(self.pop))]
-            pool.close()
-            print(data_clo)
-            print('mutli done')
+            for j, cur_ord in enumerate(self.pop):
+                print("net order", j)
+                satisfies = self.Gs[0].solve(cur_ord)
+                print("satisfies", satisfies)
+                cur_conn, cur_len, tot_tries = satisfies
+                print("total configs tried:", tot_tries)
+                data_clo.append((cur_conn, cur_len, tuple(cur_ord)))
+                write_connections_length(self.savefile, [
+                    [(cur_conn, cur_len), cur_ord]])
             writebar(self.savefile, "generation", str(i))
             qslist = quicksort(data_clo)
             self.sol_len = qslist[1]
@@ -696,15 +699,6 @@ class PPA:
         self.Gs[0].solve_order(self.last_pop[0], _print=True)
         print("Final Path =\t", self.last_pop[0], "\nFinal Length =\t",
               self.sol_len)
-
-    def multi_run(self, j):
-        print("net order", j)
-        satisfies = self.Gs[0].solve(self.pop[j])
-        print("satisfies", satisfies)
-        cur_conn, cur_len, tot_tries = satisfies
-        print("total configs tried:", tot_tries)
-        plant_data = (cur_conn, cur_len, tuple(self.pop[j]))
-        return plant_data
 
 
 
@@ -782,7 +776,7 @@ if __name__ == '__main__':
             for i, NETLIST_NUM in enumerate(NETLIST_NUMS):
                 if True:   # PPA standard
                     ppa = PPA(SUBDIR_HEUR, GRIDNUMS[ig], NETLIST_NUM, Xs[ig], Ys[ig], Gs[ig], GENERATIONS,
-                              version_specs='YV_test.' +str(j) + '_', elitism=ELITISM,
+                              version_specs='VR1.' +str(j) + '_', elitism=ELITISM,
                               pop_cut=POP_CUT, max_runners=MAX_RUNNERS, max_distance=MAX_DISTANCE,
                               objective_function_value="combined", ask=ASK, height=20, workercount=5,
                               solvertype="elevator")

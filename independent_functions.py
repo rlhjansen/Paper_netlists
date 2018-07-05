@@ -420,6 +420,10 @@ def write_connections_length_ord(filename, con_len_list):
         f.write(w_str)
         f.write('\n')
 
+def write_connections_gen(filename, gen_lst):
+    
+    with open(filename, 'a') as f:
+        f.write()
 
 def writebar(filename, *extra):
     """ appends a breakline to a file, representing the end of a generation
@@ -448,4 +452,3 @@ def lwrite_specs(subdir, additions):
     with open(os.path.join(subdir, "verbose_specs.text"), 'w') as wf:
         for spec in additions:
             wf.write(spec+'\n')
-
