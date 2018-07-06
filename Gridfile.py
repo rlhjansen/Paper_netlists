@@ -22,7 +22,7 @@ class Grid:
         # initialize the grid basics
         self.AH = AH
         self.params = size_params + [height]  # parameters of the grid
-        self.platform_params = size_params
+        #self.platform_params = size_params
         self.gate_number = gates  # number of total gates
         self.net_number = nets
 
@@ -34,15 +34,15 @@ class Grid:
         self.connections = {}  # key:val coord_tuple:tuple(neighbour_tuples)
         self.wire_locs = set()
         self.griddict = {n:Node(n, '0') for n in params_inp(self.params)}
-        self.connect()
+        #self.connect()
         self.allowed_height = 0
 
-        # elevator
+        #elevator
         self.wire_loc_dict = dict()
         self.unsolved_nets = set()
         self.net_paths = {}
         self.height = height
-
+        self.solving = False
 
         # Place gates on the grid
         if empty:
@@ -50,15 +50,20 @@ class Grid:
         else:
             if type(gates) == int:
                 self.generate_gates(gates)
+                pass
             elif type(gates) == tuple:
                 self.place_premade_gates(gates)
+                pass
             if type(nets) == int:
+                pass
                 self.generate_nets(nets)
 
         if solver == "A_star":
-            self.solve = self.solve_order
+            pass
+            #self.solve = self.solve_order
         elif solver == "elevator":
-            self.solve = self.solve_order_daal_ele
+            pass
+            #self.solve = self.solve_order_daal_ele
 
     def set_solver(self, solver):
         if solver == "A_star":
@@ -403,6 +408,7 @@ class Grid:
 
 
     def solve_order(self, net_order, _print=False, reset=True):
+        self.solving = True
         tot_length = 0
         solved = 0
         nets_solved = []
@@ -425,6 +431,7 @@ class Grid:
             print(self)
         if reset:
             self.reset_nets()
+        self.solving = False
         return solved, tot_length, tries, True
 
 
@@ -437,6 +444,7 @@ class Grid:
         :return new_order: Net order if could initially be placed, otherwise
         the new order is returned.
         """
+        self.solving = True
         tot_length = 0
         solved = 0
         new_order = net_order[:]
@@ -476,9 +484,10 @@ class Grid:
             if not valid:
                 print(self)
                 input()
+                self.solving = False
                 return len(net_order) - len(unplaced), tot_length, tries
         print("*", solved, tot_length,)
-
+        self.solving = False
         return len(net_order) - len(unplaced), tot_length, tries
 
 
@@ -669,13 +678,13 @@ def SPPA(gridfile, subdir, netfile, height, batchsize, solver, ref_pop=None, gri
     :param height: maximum allowed height for solution finding
     :return: starting parameters for the solver
     """
-    grids = []
-    for i in range(gridcopies):
-        gridfile = create_fpath(subdir, gridfile)
-        G = file_to_grid(gridfile, None, height)
-        G.read_nets(subdir, netfile)
-        G.set_solver(solver)
-        grids.append(G)
+    gridfile = create_fpath(subdir, gridfile)
+    G = file_to_grid(gridfile, None, height)
+    G.read_nets(subdir, netfile)
+    G.set_solver(solver)
+
+    grids = [G for _ in range(gridcopies)]
+
     if ref_pop:
         first_batch = ref_pop
     else:

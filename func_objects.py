@@ -5,6 +5,11 @@
 from random import random
 from math import exp, log, tanh, ceil
 import multiprocessing as mp
+#import pathos.multiprocessing as mp
+
+import sys
+
+#sys.setrecursionlimit(9000)
 
 from Gridfile import SXHC, SPPA, SRC
 from independent_functions import \
@@ -457,7 +462,7 @@ class PPA:
         self.max_distance = max_distance
 
         Gs, initial_pop, all_nets = SPPA(gridfile, subdir, netfile, height, pop_cut,
-                                        solvertype, gridcopies=workercount, ref_pop=ref_pop)
+                                        solvertype, gridcopies=200, ref_pop=ref_pop)
 
         self.pop = initial_pop
         self.tot_nets = all_nets
@@ -678,34 +683,33 @@ class PPA:
         for i in range(self.gens):
             print_start_iter(self.gn, self.nn, "Plant Propagation", i+1)
             data_clo = []  # conn, len, order
-            pool = mp.Pool(processes=None)
-            data_clo = pool.map(self.multi_run, [j for j in range(len(self.pop))])
+            pool = mp.Pool(processes=4)
+            print(self.Gs)
+            data_clo = pool.map(multi_run, [(self.Gs[ind], self.pop[ind]) for ind in range(len(self.pop))])
             # data_clo = [pool.apply(self.multi_run, args=(x,)) for x in range(len(self.pop))]
             pool.close()
             print(data_clo)
             print('mutli done')
-            writebar(self.savefile, "generation", str(i))
-            qslist = quicksort(data_clo)
-            self.sol_len = qslist[1]
-            self.populate(qslist[:self.pop_cut])
+            #writebar(self.savefile, "generation", str(i))
+            #qslist = quicksort(data_clo)
+            #self.sol_len = qslist[1]
+            #self.populate(qslist[:self.pop_cut])
 
-            self.Gs[0].solve_order(self.last_pop[0], _print=True)
-            print("Current best path =\t", self.sol_ord,
-                  "\nCurrent best length =\t", self.sol_len)
+            #self.Gs[0].solve_order(self.last_pop[0], _print=True)
+            #print("Current best path =\t", self.sol_ord,"\nCurrent best length =\t", self.sol_len)
 
         self.Gs[0].solve_order(self.last_pop[0], _print=True)
         print("Final Path =\t", self.last_pop[0], "\nFinal Length =\t",
               self.sol_len)
 
-    def multi_run(self, j):
-        print("net order", j)
-        satisfies = self.Gs[0].solve(self.pop[j])
-        print("satisfies", satisfies)
-        cur_conn, cur_len, tot_tries = satisfies
-        print("total configs tried:", tot_tries)
-        plant_data = (cur_conn, cur_len, tuple(self.pop[j]))
-        return plant_data
-
+def multi_run(gps):
+    gps[0].connect()
+    satisfies = gps[0].solve(gps[1])
+    print("satisfies", satisfies)
+    cur_conn, cur_len, tot_tries = satisfies
+    print("total configs tried:", tot_tries)
+    plant_data = (cur_conn, cur_len, tuple(gps[1]))
+    return plant_data
 
 
 ###############################################################################
@@ -784,6 +788,7 @@ if __name__ == '__main__':
                     ppa = PPA(SUBDIR_HEUR, GRIDNUMS[ig], NETLIST_NUM, Xs[ig], Ys[ig], Gs[ig], GENERATIONS,
                               version_specs='YV_test.' +str(j) + '_', elitism=ELITISM,
                               pop_cut=POP_CUT, max_runners=MAX_RUNNERS, max_distance=MAX_DISTANCE,
-                              objective_function_value="combined", ask=ASK, height=20, workercount=5,
+                              objective_function_value="combined", ask=ASK, height=20,
+                              workercount=5,
                               solvertype="elevator")
                     ppa.run_algorithm()
