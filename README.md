@@ -31,6 +31,12 @@ linter style modus aggressive (eerst kopie)
  - http://www.airoconference.it/ods2018/topics
 
 
+## todo 180710
+- use one board configuration with 10 different netlists (2-3 from heuristics case + random generated)
+- Yannick: Investigating SA temperature scheme + code
+- Reitze: finish code for Selamoglu version PPA
+- Testing Selamoglu version PPA with our version with different number of runners (10 runners from Selemoglu paper) to check behavior
+-
 
 ## todo 180507
 - Update HC in case of not fully connected; always use total distance as comparison parameter.
@@ -46,4 +52,3 @@ If difference between max and mean stays big or increases it shows that the fitn
     https://www.researchgate.net/post/What_is_the_maximum_number_of_generation_size_iteration_in_meta-heuristic_algorithms_such_as_GA
         - > fixed number of iterations for HC is not mandatory, stopping HC if no improvement is found within a certain number of iterations is also allowed, this is more complicated for PPA so just do some test runs.
     - To make sure you're in time for Essex don't do this for all generated netlists but pick a few easy ones or run all and pick the ones with the best results. This is about presenting your first findings so you don't need an extensive number of netlists to present your first assumptions.
-
