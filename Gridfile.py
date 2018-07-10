@@ -432,7 +432,7 @@ class Grid:
         if reset:
             self.reset_nets()
         self.solving = False
-        return solved, tot_length, tries, True
+        return solved, tot_length, tries
 
 
     def solve_order_daal_ele(self, net_order):
@@ -483,7 +483,6 @@ class Grid:
             tot_length += extra_length
             if not valid:
                 print(self)
-                input()
                 self.solving = False
                 return len(net_order) - len(unplaced), tot_length, tries
         print("*", solved, tot_length,)

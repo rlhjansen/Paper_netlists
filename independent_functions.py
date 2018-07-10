@@ -421,7 +421,7 @@ def write_connections_length_ord(filename, con_len_list):
         f.write('\n')
 
 def write_connections_gen(filename, gen_lst):
-    
+
     with open(filename, 'a') as f:
         f.write()
 
@@ -449,6 +449,6 @@ def write_connections_length(filename, con_len_list):
         f.write('\n')
 
 def lwrite_specs(subdir, additions):
-    with open(os.path.join(subdir, "verbose_specs.text"), 'w') as wf:
+    with open(os.path.join(subdir, "verbose_specs.txt"), 'w') as wf:
         for spec in additions:
             wf.write(spec+'\n')
