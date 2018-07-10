@@ -427,7 +427,7 @@ class PPA:
 
     for info check the original paper by Salhi and Frage
     """
-    def __init__(self, subdir, grid_num, net_num, x, y, g, max_generations, version_specs=[], height=7, elitism=0, pop_cut=20, max_runners=5, max_distance=5, objective_function_value=False, multi_objective_distribution=False, ref_pop=None, workercount=1, ask=True, solvertype="Astar"):
+    def __init__(self, subdir, grid_num, net_num, x, y, g, max_generations, version_specs=[], height=7, elitism=0, pop_cut=20, max_runners=5, max_distance=5, objective_function_value=False, multi_objective_distribution=False, ref_pop=None, workercount=None, ask=True, solvertype="Astar"):
         """
 
         :param subdir: Subdirectory name where files are located
@@ -453,6 +453,7 @@ class PPA:
         """
         gridfile = get_name_circuitfile(grid_num, x, y, g)
         netfile = get_name_netfile(grid_num, net_num)
+        self.workercount = workercount
         self.gn = grid_num
         self.nn = net_num
         self.elitism = elitism
@@ -683,17 +684,17 @@ class PPA:
         for i in range(self.gens):
             print_start_iter(self.gn, self.nn, "Plant Propagation", i+1)
             data_clo = []  # conn, len, order
-            pool = mp.Pool(processes=4)
+            pool = mp.Pool(processes=self.workercount)
             print(self.Gs)
             data_clo = pool.map(multi_run, [(self.Gs[ind], self.pop[ind]) for ind in range(len(self.pop))])
             # data_clo = [pool.apply(self.multi_run, args=(x,)) for x in range(len(self.pop))]
             pool.close()
             print(data_clo)
             print('mutli done')
-            #writebar(self.savefile, "generation", str(i))
-            #qslist = quicksort(data_clo)
-            #self.sol_len = qslist[1]
-            #self.populate(qslist[:self.pop_cut])
+            writebar(self.savefile, "generation", str(i))
+            qslist = quicksort(data_clo)
+            self.sol_len = qslist[1]
+            self.populate(qslist[:self.pop_cut])
 
             #self.Gs[0].solve_order(self.last_pop[0], _print=True)
             #print("Current best path =\t", self.sol_ord,"\nCurrent best length =\t", self.sol_len)
@@ -705,9 +706,8 @@ class PPA:
 def multi_run(gps):
     gps[0].connect()
     satisfies = gps[0].solve(gps[1])
-    print("satisfies", satisfies)
-    cur_conn, cur_len, tot_tries = satisfies
-    print("total configs tried:", tot_tries)
+
+    cur_conn, cur_len, tot_tries = satisfies[:3]
     plant_data = (cur_conn, cur_len, tuple(gps[1]))
     return plant_data
 
@@ -738,19 +738,19 @@ SA_ALL_ADDITION = ["Simulated Annealing ConLen", "A-star, " +str(NETL_LEN) + "_l
 
 # Heuristics case
 GRIDNUMS = [1, 2]
-#GRIDNUMS = [2]
+GRIDNUMS = [2]
 
 NETLIST_NUMS = [1,2,3]
-#NETLIST_NUMS = [3]
+NETLIST_NUMS = [3]
 
 Xs = [18, 18]
-#Xs = [18]
+Xs = [18]
 
 Ys = [13, 17]
-#Ys = [17]
+Ys = [17]
 
 Gs = [25, 50]
-#Gs = [50]
+Gs = [50]
 
 #RC
 BATCHES = 100
@@ -763,6 +763,7 @@ ITERATIONS = 5000
 GENERATIONS = 120
 ELITISM = 30
 POP_CUT = 30
+
 MAX_RUNNERS = 5
 MAX_DISTANCE = MAX_RUNNERS
 
@@ -779,16 +780,15 @@ ANN_FUNC_PARAMS_CONN = ["connections", "geman", None, None, 100, 1]
 ANN_FUNC_PARAMS_BOTH = ["all", "geman", 700, 10, 100, 1]
 
 
-
 if __name__ == '__main__':
     for j in range(10):
         for ig, k in enumerate(GRIDNUMS):
             for i, NETLIST_NUM in enumerate(NETLIST_NUMS):
                 if True:   # PPA standard
                     ppa = PPA(SUBDIR_HEUR, GRIDNUMS[ig], NETLIST_NUM, Xs[ig], Ys[ig], Gs[ig], GENERATIONS,
-                              version_specs='YV_test.' +str(j) + '_', elitism=ELITISM,
+                              version_specs='RV_test.' +str(j) + '_', elitism=ELITISM,
                               pop_cut=POP_CUT, max_runners=MAX_RUNNERS, max_distance=MAX_DISTANCE,
-                              objective_function_value="combined", ask=ASK, height=20,
-                              workercount=5,
-                              solvertype="elevator")
+                              objective_function_value="combined", ask=ASK, height=7,
+                              workercount=None,
+                              solvertype="A_star")
                     ppa.run_algorithm()
