@@ -50,8 +50,7 @@ def swap_two_X_times(net_path, X):
         set_swaps = set(swaps)
         if len(swaps) == len(set_swaps):
             break
-        #print("false swaplist", swaps)
-    #print("true swaps", swaps)
+
     for i in range(X):
         npath[swaps[2*i]], npath[swaps[2*i+1]] = npath[swaps[2*i+1]], npath[swaps[2*i]]
     return npath
@@ -120,7 +119,7 @@ def quicksort(arr):
     return less + pivotList + more
 
 
-def combine_score(n_nets, connections, length, *args):
+def combine_score(connections, length, *args, scoring="max", total_nets=0):
     """ combines cnnections & length components into a single score
 
     ex: 45 connections, 400  wire length --> 45.9600
@@ -131,8 +130,12 @@ def combine_score(n_nets, connections, length, *args):
     :param length: tot length of nets on the circuit
     :return:
     """
-    frac_part = float(10000-length)/10000.
-    return float(connections)+frac_part
+    if scoring == "max":
+        frac_part = float(10000-length)/10000.
+        return float(connections)+frac_part
+    elif scoring =="min":
+        frac_part = float(length)/10000.
+        return float(total_nets - connections)+frac_part
 
 
 def score_connect_only(n_nets, connections, *args):
@@ -193,14 +196,15 @@ def order_from_float(float_indeces, nets):
 
 
 def create_fpath(subdir, outf):
-    print(outf)
-    print(subdir)
     rel_path = os.path.join(subdir, outf)
     script_dir = os.path.dirname(__file__)
     dir_check_path = os.path.join(script_dir, subdir)
     if not os.path.exists(dir_check_path):
         os.mkdir(dir_check_path)
+        print("made_directory:", dir_check_path)
+
     fpath = os.path.join(script_dir, rel_path)
+    print("create_fpath returned", fpath)
     return fpath
 
 
@@ -213,16 +217,17 @@ def get_name_circuitfile(gridnum, x, y, tot_gates):
         y) + "g" + str(tot_gates) + ".csv"
 
 
-def create_data_directory(main_subdir, gridnum, x, y, tot_gates, listnum, version_specs, dir_specs, Func_specs, ask=True):
+def create_data_directory(main_subdir, gridnum, x, y, tot_gates, listnum, version_specs, dir_specs, func_specs, ask=True):
     gridfn = get_name_circuitfile(gridnum, x, y, tot_gates)
     netfn = get_name_netfile(gridnum, listnum)
-    print(Func_specs)
+    print("funcspecs in data creation:", func_specs)
+    print("dir_specs in data creation:", dir_specs)
     grid_net_subdir = gridfn[:-4] + "_" + netfn[:-4] + ' - ' + version_specs + ' - ' + '_'.join(dir_specs)
     rel_path = os.path.join(main_subdir, grid_net_subdir)
     script_dir = os.path.dirname(__file__)
     dir_check_path = os.path.join(script_dir, rel_path)
     if ask:
-        ans = input("current additions are as follows:" + str(Func_specs) + "does this match what you are trying to record? (Y/n)")
+        ans = input("current additions are as follows:" + str(func_specs) + "does this match what you are trying to record? (Y/n)")
         while True:
             if ans == 'Y':
                 break
@@ -236,8 +241,9 @@ def create_data_directory(main_subdir, gridnum, x, y, tot_gates, listnum, versio
         os.mkdir(dir_check_path)
         copy(create_fpath(main_subdir,gridfn), os.path.join(dir_check_path, gridfn))
         copy(create_fpath(main_subdir,netfn), os.path.join(dir_check_path, netfn))
-        lwrite_specs(dir_check_path, Func_specs)
+        lwrite_specs(dir_check_path, func_specs)
     else:
+        print("current path is", dir_check_path)
         ans = input("Continuing will append pre-recorded data\nContinue? (Y/n)")
         while True:
             if ans == 'Y':
@@ -248,7 +254,9 @@ def create_data_directory(main_subdir, gridnum, x, y, tot_gates, listnum, versio
             else:
                 print('invalid answer, did you perhaps not enter the capital "Y"?')
                 ans = input("Continuing will append pre-recorded data\nContinue? (Y/n)")
-    return os.path.join(dir_check_path, 'data ' + '_'.join(Func_specs) + '.tsv')
+    savefile = os.path.join(dir_check_path, 'data ' + '_'.join(dir_specs) + '.tsv')
+    print("savefile after creation:\t", savefile)
+    return savefile
 
 
 def get_subdirs(a_dir):
@@ -414,16 +422,12 @@ def print_final_state(grid, best_order, best_len, \
 
 
 def write_connections_length_ord(filename, con_len_list):
-    w_str = '\n'.join(['\t'.join([','.join([str(l) for l in m]) for m in n])
-                       for n in con_len_list])
+    w_str = '\n'.join(['\t'.join([','.join([str(l) for l in m]) for m in n]) for n in con_len_list])
     with open(filename, 'a') as f:
         f.write(w_str)
         f.write('\n')
 
-def write_connections_gen(filename, gen_lst):
 
-    with open(filename, 'a') as f:
-        f.write()
 
 def writebar(filename, *extra):
     """ appends a breakline to a file, representing the end of a generation
@@ -431,9 +435,12 @@ def writebar(filename, *extra):
     :param filename: file to append to
     :param extra: extra information at the breakline
     """
-    with open(filename, 'a') as f:
-        f.write('#### ' + ' '.join([*extra]) + '\n')
-
+    if os.path.exists(filename):
+        with open(filename, 'a') as f:
+            f.write('#### ' + ' '.join([*extra]) + '\n')
+    else:
+        with open(filename, 'w') as f:
+            f.write('#### ' + ' '.join([*extra]) + '\n')
 
 def write_connections_length(filename, con_len_list):
     """ appends result data to file, first connections then total length,
@@ -443,7 +450,7 @@ def write_connections_length(filename, con_len_list):
     :param filename:
     :param con_len_list:
     """
-    w_str = '\n'.join(['\t'.join([','.join([str(l) for l in m]) for m in n[:-1]]) for n in con_len_list])
+    w_str = '\n'.join([','.join([str(n[0]), str(n[1])]) for n in con_len_list])
     with open(filename, 'a') as f:
         f.write(w_str)
         f.write('\n')

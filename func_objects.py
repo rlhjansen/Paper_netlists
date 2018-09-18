@@ -427,7 +427,7 @@ class PPA:
 
     for info check the original paper by Salhi and Frage
     """
-    def __init__(self, subdir, grid_num, net_num, x, y, g, max_generations, version_specs=[], height=7, elitism=0, pop_cut=20, max_runners=5, max_distance=5, objective_function_value=False, multi_objective_distribution=False, ref_pop=None, workercount=None, ask=True, solvertype="Astar"):
+    def __init__(self, subdir, grid_num, net_num, x, y, g, max_generations, version_specs=[], height=7, elitism=0, pop_cut=20, max_runners=5, max_distance=5, objective_function_value=False, multi_objective_distribution=False, ref_pop=None, workercount=None, ask=True, solvertype="Astar", algver="Selamoglu", arbitrary=24, best_percent=0.2, best_ordering="max"):
         """
 
         :param subdir: Subdirectory name where files are located
@@ -459,6 +459,7 @@ class PPA:
         self.elitism = elitism
         self.gens = max_generations
         self.pop_cut = pop_cut
+        self.pop_score = [0]*pop_cut  # Only relevant for Selamoglu.
         self.max_runners = max_runners
         self.max_distance = max_distance
 
@@ -471,7 +472,18 @@ class PPA:
         self.last_pop = tuple((),)
         self.last_scores = tuple((),)
         self.solvertype = solvertype
+        self.best_ordering = best_ordering
         self.objective_function_value = objective_function_value
+        if algver == "Selamoglu":
+            self.run = self.run_selamoglu
+            self.arbitrary = arbitrary
+            self.best_percent = best_percent
+        elif algver == "Standard":
+            self.run = self.run_algorithm
+        else:
+            print("no sufficient algorithms version input\n Use algver='Selamoglu' or 'Standard'")
+        self.algver = algver
+
 
         func_params, dir_specs = self.param_to_specs()
 
@@ -509,7 +521,7 @@ class PPA:
                        "max_distance" + str(self.max_distance),
                        "elitism" + str(self.elitism),
                        "generations" + str(self.gens),
-                       "objective function" + str(self.objective_function_value)]
+                       "objectiveFunction" + str(self.objective_function_value)]
 
         dir_specs = ["PPA",
                       self.solvertype[:2],
@@ -518,8 +530,24 @@ class PPA:
                       "md" + str(self.max_distance),
                       "e" + str(self.elitism),
                       "g" + str(self.gens),
-                      "ofv-" + str(self.objective_function_value)]
+                      "ofv_" + str(self.objective_function_value)]
+        if self.algver == "Selamoglu":
+            dir_specs.extend(["vSela",
+                              "a"+str(self.arbitrary),
+                              "bp"+str(self.best_percent)])
+
+            FUNC_PARAMS.extend(["AlgVersionSelamoglu",
+                               "arbitrary" + str(self.arbitrary),
+                                "best_percent" + str(self.best_percent)])
+        else:
+            dir_specs.append("vStdPPA")
+            FUNC_PARAMS.append("AlgVersionStandard")
+
+
+        print("dir specs", dir_specs)
+        print("FUNC PARAMS", FUNC_PARAMS)
         return FUNC_PARAMS, dir_specs
+
 
     def fitnesses_to_newpop(self, scores, orders):
         """ runners & distances from original paper by Salhi & Fraga
@@ -568,6 +596,8 @@ class PPA:
         :return: newest values, combined & sorted with the best (see elitism)
             of last generation.
         """
+        #Todo make adaptible with max & min scoring, see lambda in selamoglu
+
         scores = self.last_scores + nscores
         orders = self.last_pop + norderlist
         zipped = zip(scores, orders)
@@ -604,7 +634,7 @@ class PPA:
         """
 
         qslen = len(qslist)
-        scores = tuple([self.ofv(self.tot_nets, qslist[i][0], qslist[i][1], 0, 0) for i in range(qslen)])
+        scores = tuple([self.ofv(qslist[i][0], qslist[i][1], scoring=self.best_ordering, total_nets=self.tot_nets) for i in range(qslen)])
         orderlist = tuple([qslist[i][2] for i in range(qslen)])
 
         tot = self.combine_old_new(scores, orderlist)
@@ -630,7 +660,7 @@ class PPA:
         self.sol_len = best_len
 
 
-    def run_selamoglu(self, best_percent, arbitrairy):
+    def run_selamoglu(self):
         """ See paper Selamoglu & Salhi:
 
         The Plant Propagation Algorithm for Discrete Optimisation:
@@ -646,52 +676,104 @@ class PPA:
         (Note, looks like multiple paralel hillclimbers)
         """
         #Todo customize saving to view how plants propagate
-        #Todo tournament based fitness?
         #Todo Distance function implementation
 
-        for i in range(ceil(self.pop_cut * best_percent)):
-            new_ords = [self.distancefunc(self.pop[i], 1) for _ in range(arbitrary/(i+1))]
-            for new_ord in new_ords:
-                cur_conn, cur_len = self.Gs[0].solve_order(new_ord)
-                runner_eval = combine_score(cur_conn, cur_len)
-                write_connections_length(self.savefile, [
-                    [(cur_conn, cur_len), new_ord]])
+        self.initial_score_Selamoglu()
+        print("Initial scoring done")
+        for i in range(self.gens):
+            next_ords = []
+            popsize = ceil(len(self.pop))
+            best_plants = ceil(popsize * self.best_percent)
+            print("Best plants", best_plants)
+            for j in range(best_plants):
+                print("making", self.arbitrary/(j+1))
+                next_ords.extend([(swap_two_X_times(self.pop[j], 1), j) for _ in range(ceil(self.arbitrary/(j+1)))])
+                print("best plant", j, " produces",  len(next_ords[j]))
+                print(next_ords[j])
 
-                if runner_eval > self.pop_score[i]:
-                    self.pop[i], self.pop_score[i] = new_ord, runner_eval
+            next_ords.extend([(swap_two_X_times(self.pop[j], self.max_distance), j) for j in range(best_plants, popsize, 1)])
 
-        for i in range(ceil(self.pop_cut*best_percent), self.pop_cut, 1):
-            new_ord = self.distancefunc(self.pop[i],self.max_runners)
-            cur_conn, cur_len = self.Gs[0].solve_order(new_ord)
-            runner_eval = combine_score(cur_conn, cur_len)
-            write_connections_length(self.savefile, [
-                [(cur_conn, cur_len), new_ord]])
 
-            if runner_eval > self.pop_score[i]:
-                self.pop[i], self.pop_score[i] = new_ord, runner_eval
+
+            print_start_iter(self.gn, self.nn, "Plant Propagation Selamoglu", i + 1)
+
+            pool = mp.Pool(processes=self.workercount)
+            data_clo = pool.map(multi_selamoglu, [(self.Gs[ind], next_ords[ind]) for ind in range(len(next_ords))])
+            pool.close()
+
+            writebar(self.savefile, "generation", str(i + 1))
+            write_connections_length(self.savefile, data_clo)
+
+            for inst in data_clo:
+
+                (cur_conn, cur_len, cur_order, index) = inst
+                print("comparing for offspring of", index)
+                runner_eval = combine_score(cur_conn, cur_len, scoring=self.best_ordering, total_nets=self.tot_nets)
+                if runner_eval > self.pop_score[index]:
+                    self.pop[index], self.pop_score[index] = cur_order, runner_eval
+            zipped = zip(self.pop, self.pop_score)
+
+            if self.best_ordering == "max":
+                resorted = list(zip(*sorted(zipped, key=lambda x: -x[1])))
+            if self.best_ordering == "min":
+                resorted = list(zip(*sorted(zipped, key=lambda x: x[1])))
+
+            self.pop, self.pop_score = list(resorted[0]), list(resorted[1])
+
+
+    def initial_score_Selamoglu(self):
+        pool = mp.Pool(processes=self.workercount)
+        data_clo = pool.map(multi_selamoglu,
+                            [(self.Gs[ind], (self.pop[ind], ind)) for ind in
+                             range(len(self.pop))])
+        pool.close()
+        scores = []
+        for inst in data_clo:
+            (cur_conn, cur_len, cur_order, index) = inst
+            print("comparing for offspring of", index)
+            scores.append(combine_score(cur_conn, cur_len,
+                                        scoring=self.best_ordering,
+                                        total_nets=self.tot_nets))
+
+        print(scores)
+        if self.best_ordering == "max":
+            qslist = [x for _,x in sorted(zip(scores, data_clo), key=lambda x: -x[0])]
+        if self.best_ordering == "min":
+            print("enter min")
+            qslist = [x for _,x in sorted(zip(scores, data_clo), key=lambda x:x[0])]
+
+        print("savefile before writing", self.savefile)
+        writebar(self.savefile, "generation", "0")
+        write_connections_length(self.savefile, data_clo)
+        print("initial scoring")
+        for inst in qslist:
+            print(inst)
+
+        for inst in qslist:
+            (cur_conn, cur_len, cur_order, index) = inst
+            runner_eval = combine_score(self.tot_nets, cur_conn, cur_len, scoring=self.best_ordering, total_nets=self.tot_nets)
+            self.pop[index], self.pop_score[index] = cur_order, runner_eval
 
     def run_algorithm(self):
         """main loop, generates evaluates & saves "plants" per generation.
 
         """
-        #Todo custimize option for connections and or length, length divider as well (quicksort adaption)
         #Todo customize option to save amount of swaps with kwarg
         #Todo tournament based fitness? - not for now
         #Todo Distance function implementation (swap, reverse, other)
+        #todo remove quicksort function in favor of lambda style function like in selamoglu
 
-        print(self.Gs[0])
 
         for i in range(self.gens):
             print_start_iter(self.gn, self.nn, "Plant Propagation", i+1)
             data_clo = []  # conn, len, order
+
             pool = mp.Pool(processes=self.workercount)
-            print(self.Gs)
             data_clo = pool.map(multi_run, [(self.Gs[ind], self.pop[ind]) for ind in range(len(self.pop))])
-            # data_clo = [pool.apply(self.multi_run, args=(x,)) for x in range(len(self.pop))]
             pool.close()
-            print(data_clo)
-            print('mutli done')
+            print("savefile before writing", self.savefile)
             writebar(self.savefile, "generation", str(i))
+            write_connections_length(self.savefile, data_clo)
             qslist = quicksort(data_clo)
             self.sol_len = qslist[1]
             self.populate(qslist[:self.pop_cut])
@@ -709,6 +791,14 @@ def multi_run(gps):
 
     cur_conn, cur_len, tot_tries = satisfies[:3]
     plant_data = (cur_conn, cur_len, tuple(gps[1]))
+    return plant_data
+
+def multi_selamoglu(gpis):
+    gpis[0].connect()
+    satisfies = gpis[0].solve(gpis[1][0])
+
+    cur_conn, cur_len, tot_tries = satisfies[:3]
+    plant_data = (cur_conn, cur_len, tuple(gpis[1][0]), gpis[1][1])
     return plant_data
 
 
@@ -738,19 +828,19 @@ SA_ALL_ADDITION = ["Simulated Annealing ConLen", "A-star, " +str(NETL_LEN) + "_l
 
 # Heuristics case
 GRIDNUMS = [1, 2]
-GRIDNUMS = [2]
+#GRIDNUMS = [2]
 
 NETLIST_NUMS = [1,2,3]
-NETLIST_NUMS = [3]
+#NETLIST_NUMS = [3]
 
 Xs = [18, 18]
-Xs = [18]
+#Xs = [18]
 
 Ys = [13, 17]
-Ys = [17]
+#Ys = [17]
 
 Gs = [25, 50]
-Gs = [50]
+#Gs = [50]
 
 #RC
 BATCHES = 100
@@ -761,6 +851,7 @@ ITERATIONS = 5000
 
 #PPA
 GENERATIONS = 120
+
 ELITISM = 30
 POP_CUT = 30
 
@@ -789,6 +880,5 @@ if __name__ == '__main__':
                               version_specs='RV_test.' +str(j) + '_', elitism=ELITISM,
                               pop_cut=POP_CUT, max_runners=MAX_RUNNERS, max_distance=MAX_DISTANCE,
                               objective_function_value="combined", ask=ASK, height=7,
-                              workercount=None,
-                              solvertype="A_star")
-                    ppa.run_algorithm()
+                              workercount=None, solvertype="A_star", algver="Selamoglu", best_ordering="max")
+                    ppa.run()
