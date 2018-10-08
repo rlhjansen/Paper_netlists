@@ -442,14 +442,10 @@ class PPA:
         :param max_runners: maximum amount of child solution sets produced by
             one parent.
         :param combined: fitness based on combined score (integer & decimal part)
-        :param multi_objective: fitness based on [0.X, 0.Y] percentages for
+        :param multi_objective: fitness based on [X, Y] percentages for
             multi optimization X for connections, Y for length
         :param connect_only: fitness based on number of connections only
-        :param workercount: so far this is only for multiple grid creation.
-            multiple grids need be created as pythons deepcopy is unable to
-            handle highly linked objects (the grid) due to recursiondepth/implementation
-
-            NOTE - Nothing concerning multiprocessing has yet been done.
+        :param workercount: # of workers paralel processes
         """
         gridfile = get_name_circuitfile(grid_num, x, y, g)
         netfile = get_name_netfile(grid_num, net_num)
@@ -684,12 +680,10 @@ class PPA:
             next_ords = []
             popsize = ceil(len(self.pop))
             best_plants = ceil(popsize * self.best_percent)
-            print("Best plants", best_plants)
             for j in range(best_plants):
-                print("making", self.arbitrary/(j+1))
-                next_ords.extend([(swap_two_X_times(self.pop[j], 1), j) for _ in range(ceil(self.arbitrary/(j+1)))])
-                print("best plant", j, " produces",  len(next_ords[j]))
-                print(next_ords[j])
+                new = [(swap_two_X_times(self.pop[j], 1), j) for _ in range(ceil(self.arbitrary / (j + 1)))]
+                next_ords.extend(new)
+
 
             next_ords.extend([(swap_two_X_times(self.pop[j], self.max_distance), j) for j in range(best_plants, popsize, 1)])
 
@@ -707,10 +701,10 @@ class PPA:
             for inst in data_clo:
 
                 (cur_conn, cur_len, cur_order, index) = inst
-                print("comparing for offspring of", index)
                 runner_eval = combine_score(cur_conn, cur_len, scoring=self.best_ordering, total_nets=self.tot_nets)
                 if runner_eval > self.pop_score[index]:
                     self.pop[index], self.pop_score[index] = cur_order, runner_eval
+
             zipped = zip(self.pop, self.pop_score)
 
             if self.best_ordering == "max":
@@ -727,63 +721,63 @@ class PPA:
                             [(self.Gs[ind], (self.pop[ind], ind)) for ind in
                              range(len(self.pop))])
         pool.close()
-        scores = []
-        for inst in data_clo:
-            (cur_conn, cur_len, cur_order, index) = inst
-            print("comparing for offspring of", index)
-            scores.append(combine_score(cur_conn, cur_len,
-                                        scoring=self.best_ordering,
-                                        total_nets=self.tot_nets))
+        scores, qslist = self.sort_data(data_clo)
 
-        print(scores)
-        if self.best_ordering == "max":
-            qslist = [x for _,x in sorted(zip(scores, data_clo), key=lambda x: -x[0])]
-        if self.best_ordering == "min":
-            print("enter min")
-            qslist = [x for _,x in sorted(zip(scores, data_clo), key=lambda x:x[0])]
-
-        print("savefile before writing", self.savefile)
         writebar(self.savefile, "generation", "0")
         write_connections_length(self.savefile, data_clo)
         print("initial scoring")
-        for inst in qslist:
-            print(inst)
 
         for inst in qslist:
             (cur_conn, cur_len, cur_order, index) = inst
-            runner_eval = combine_score(self.tot_nets, cur_conn, cur_len, scoring=self.best_ordering, total_nets=self.tot_nets)
+            runner_eval = combine_score(cur_conn, cur_len, scoring=self.best_ordering, total_nets=self.tot_nets)
             self.pop[index], self.pop_score[index] = cur_order, runner_eval
 
     def run_algorithm(self):
         """main loop, generates evaluates & saves "plants" per generation.
 
         """
-        #Todo customize option to save amount of swaps with kwarg
-        #Todo tournament based fitness? - not for now
         #Todo Distance function implementation (swap, reverse, other)
-        #todo remove quicksort function in favor of lambda style function like in selamoglu
-
 
         for i in range(self.gens):
             print_start_iter(self.gn, self.nn, "Plant Propagation", i+1)
-            data_clo = []  # conn, len, order
 
             pool = mp.Pool(processes=self.workercount)
             data_clo = pool.map(multi_run, [(self.Gs[ind], self.pop[ind]) for ind in range(len(self.pop))])
             pool.close()
-            print("savefile before writing", self.savefile)
             writebar(self.savefile, "generation", str(i))
             write_connections_length(self.savefile, data_clo)
-            qslist = quicksort(data_clo)
+            scores, qslist = self.sort_data(data_clo)
             self.sol_len = qslist[1]
             self.populate(qslist[:self.pop_cut])
-
-            #self.Gs[0].solve_order(self.last_pop[0], _print=True)
-            #print("Current best path =\t", self.sol_ord,"\nCurrent best length =\t", self.sol_len)
 
         self.Gs[0].solve_order(self.last_pop[0], _print=True)
         print("Final Path =\t", self.last_pop[0], "\nFinal Length =\t",
               self.sol_len)
+
+
+    def sort_data(self, data_clo):
+        """ sorts data to either a minimum or maximum scoring measure,
+
+
+
+        :param data_clo: list of instances with template:
+            connections, length, order (and index if applicable)
+        :return:
+        """
+        scores = []
+        for inst in data_clo:
+            scores.append(combine_score(inst[0], inst[1],
+                                        scoring=self.best_ordering,
+                                        total_nets=self.tot_nets))
+
+        if self.best_ordering == "max":
+            qslist = [x for _, x in
+                      sorted(zip(scores, data_clo), key=lambda x: -x[0])]
+        if self.best_ordering == "min":
+            print("enter min")
+            qslist = [x for _, x in
+                      sorted(zip(scores, data_clo), key=lambda x: x[0])]
+        return scores, qslist
 
 def multi_run(gps):
     gps[0].connect()
@@ -880,5 +874,5 @@ if __name__ == '__main__':
                               version_specs='RV_test.' +str(j) + '_', elitism=ELITISM,
                               pop_cut=POP_CUT, max_runners=MAX_RUNNERS, max_distance=MAX_DISTANCE,
                               objective_function_value="combined", ask=ASK, height=7,
-                              workercount=None, solvertype="A_star", algver="Selamoglu", best_ordering="max")
+                              workercount=None, solvertype="A_star", algver="Standard", best_ordering="max")
                     ppa.run()

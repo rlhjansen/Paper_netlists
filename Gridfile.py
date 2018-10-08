@@ -102,12 +102,10 @@ class Grid:
         """
         adds the connections each node has into the connection dictionary
         """
-        print("connecting...")
         for key in self.griddict.keys():
             neighbour_nodes = tuple([self.griddict.get(pn) for pn in neighbours(key) if self.griddict.get(pn, False)])
             # neigbour_coords = tuple([pn for pn in neighbours(key) if self.griddict.get(pn, False)]) // testing with coords
             self.griddict[key].connect(neighbour_nodes)
-        print("done connecting")
 
     def rand_loc(self):
         """
@@ -337,7 +335,6 @@ class Grid:
         while not q.empty():
             count += 1
             k = q.get()
-            #print(k)
             _, steps, current = k
             for neighbour in self.griddict.get(current).get_neighbours():
                 n_coord = neighbour.get_coord()
@@ -349,7 +346,6 @@ class Grid:
                                visited.get(end_loc)[1], count
                     else:
                         continue
-                #print(k, n_coord)
                 if n_coord in visited:
                     if visited.get(n_coord)[1] > steps:
                         visited[n_coord] = [current, steps]
@@ -359,7 +355,6 @@ class Grid:
                     visited[n_coord] = [current, steps]
                     q.put((manhattan(n_coord, end_loc) + steps + 1, steps + 1,
                            n_coord))
-        #print("no path found")
         return False, False, count
 
 
@@ -426,9 +421,8 @@ class Grid:
                 tot_length += length
                 nets_solved.append(net)
 
-        print("*", solved, tot_length, nets_solved)
         if _print:
-            print(self)
+            print("printing self\n", self)
         if reset:
             self.reset_nets()
         self.solving = False
@@ -482,10 +476,9 @@ class Grid:
             extra_length, valid = self.elevate_unsolved(h)
             tot_length += extra_length
             if not valid:
-                print(self)
+                print("printing self", self)
                 self.solving = False
                 return len(net_order) - len(unplaced), tot_length, tries
-        print("*", solved, tot_length,)
         self.solving = False
         return len(net_order) - len(unplaced), tot_length, tries
 
@@ -712,7 +705,7 @@ def file_to_grid(fpath, nets, height):
     :param nets: either a netlist or a number of nets
     :return: a new Grid
     """
-    print(fpath)
+    print("line 711 Gridfile", fpath)
     base = read_grid(fpath)
     xlen = len(base[0])
     ylen = len(base)
