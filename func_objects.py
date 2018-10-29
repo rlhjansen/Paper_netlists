@@ -687,8 +687,6 @@ class PPA:
 
             next_ords.extend([(swap_two_X_times(self.pop[j], self.max_distance), j) for j in range(best_plants, popsize, 1)])
 
-
-
             print_start_iter(self.gn, self.nn, "Plant Propagation Selamoglu", i + 1)
 
             pool = mp.Pool(processes=self.workercount)
@@ -699,7 +697,6 @@ class PPA:
             write_connections_length(self.savefile, data_clo)
 
             for inst in data_clo:
-
                 (cur_conn, cur_len, cur_order, index) = inst
                 runner_eval = combine_score(cur_conn, cur_len, scoring=self.best_ordering, total_nets=self.tot_nets)
                 if runner_eval > self.pop_score[index]:
