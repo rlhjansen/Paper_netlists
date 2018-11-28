@@ -1,7 +1,4 @@
-*.py[cod]
-.DS_Store
-
-__pycache__/
-*.py[cod]
-
-event
+**.pyc
+**.xml
+other
+data/official_reference/
