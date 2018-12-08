@@ -1,6 +1,5 @@
 
-import os
-from random import randint, shuffle, random
+from random import randint, shuffle
 import queue as Q
 
 from ..gridhelper import \
@@ -40,7 +39,6 @@ class Grid:
         self.solving = False
         if gates:
             self.place_premade_gates(gates_from_lol(gates))
-
 
 
     def set_solver(self, solver):
@@ -136,14 +134,6 @@ class Grid:
         self.coord_gate = {}
         self.gate_net = {}
 
-    def connect(self):
-        """
-        adds the connections each node has into the connection dictionary
-        """
-        for key in self.griddict.keys():
-            neighbour_nodes = tuple([self.griddict.get(pn) for pn in neighbours(key) if self.griddict.get(pn, False)])
-            # neigbour_coords = tuple([pn for pn in neighbours(key) if self.griddict.get(pn, False)]) // testing with coords
-            self.griddict[key].connect(neighbour_nodes)
 
     # adds a gate to the grid
     def add_gate(self, coords, gate_string):
@@ -184,7 +174,6 @@ class Grid:
 
         # elevator
         self.wire_loc_dict[n_str] = set()
-
 
 
     def generate_nets(self, num):
@@ -320,17 +309,14 @@ class Grid:
         """
 
         q = Q.PriorityQueue()
-
         count = 0
-
         end_loc = self.gate_coords.get(self.net_gate.get(net)[1])
         if self.griddict.get(end_loc).is_blocked_in():
             return False, False, count
-
-        if self.griddict.get(end_loc).is_blocked_in():
+        start_loc = self.gate_coords.get(self.net_gate.get(net)[0])
+        if self.griddict.get(start_loc).is_blocked_in():
             return False, False, count
 
-        start_loc = self.gate_coords.get(self.net_gate.get(net)[0])
         path = ((start_loc),)
         manh_d = manhattan(path[-1], end_loc)
         q.put((manh_d, 0, start_loc))
@@ -362,51 +348,8 @@ class Grid:
         return False, False, count
 
 
-    def O_A_star(self, net):
-        """ finds a path for a net with A-star algorithm, quits searching early if the end-gate is closed off by its immediate neighbourse.
 
-        :param net: gate-pair (gX, gY)
-        :return: path, length if path founde, else false, false
-        """
-
-        q = Q.PriorityQueue()
-        steps = 0
-        count = 0
-        end_loc = self.gate_coords.get(self.net_gate.get(net)[1])
-        if self.griddict.get(end_loc).is_blocked_in():
-            return False, False, count
-        start_loc = self.gate_coords.get(self.net_gate.get(net)[0])
-        path = ((start_loc),)
-        manh_d = manhattan(path[-1], end_loc)
-        q.put((manh_d + steps, steps, path),)
-        visited = set()
-        while not q.empty():
-            count += 1
-            _, steps, path = q.get()
-            for n in self.griddict.get(path[-1]).get_neighbours():
-                new_coord = n.get_coord()
-                if new_coord[2] > self.allowed_height:
-                    continue
-                if new_coord in visited:
-                    continue
-                else:
-                    if n.is_occupied():
-                        if not n.get_coord() == end_loc:
-                            continue
-                    manh_d = manhattan(new_coord, end_loc)
-                    if manh_d == 0:
-                        path = path + (new_coord,)
-                        for coord in path:
-                            if coord[2] == self.allowed_height:
-                                self.allowed_height += 1
-                                break
-                        return path, steps + 1, count
-                    q.put((manh_d + steps, steps + 1, path + (new_coord,)),)
-                    visited.add(new_coord)
-        return False, False, count  # No Path found
-
-
-    def solve_order(self, net_order, verbose=False, reset=True):
+    def solve_order(self, net_order):
         self.solving = True
         tot_length = 0
         solved = 0
@@ -416,19 +359,10 @@ class Grid:
             path, length, ntries = self.A_star(net)
             tries += ntries
             if path:
-                Err = self.place(net, path)
-                if Err:
-                    print("encountered error in placement")
-                    print(path)
-                    raise ValueError("improper path placement")
+                self.place(net, path)
                 solved += 1
                 tot_length += length
                 nets_solved.append(net)
-
-        if verbose:
-            print("printing self\n", self)
-        if reset:
-            self.reset_nets()
         self.solving = False
         return solved, tot_length, tries
 
@@ -470,16 +404,12 @@ class Grid:
                 tries += count
                 if path:
                     Err = self.place(net, path)
-                    if Err:
-                        raise ValueError("invalid placement")
-                    else:
-                        solved += 1
-                        self.unsolved_nets.remove(net)
+                    solved += 1
+                    self.unsolved_nets.remove(net)
             h += 1
             extra_length, valid = self.elevate_unsolved(h)
             tot_length += extra_length
             if not valid:
-                print("printing self", self)
                 self.solving = False
                 return len(net_order) - len(unplaced), tot_length, tries
         self.solving = False
@@ -616,7 +546,6 @@ class Grid:
                                n_coord))
         return False, False, count
 
-
     def get_solution_placement(self, net_order):
         paths = []
         for net in net_order:
@@ -629,7 +558,6 @@ class Grid:
         self.reset_nets()
         return paths
 
-
     def place(self, net, path):
         for spot in path[:-1]:
             if self.griddict[spot].set_value(net):
@@ -637,14 +565,6 @@ class Grid:
             else:
                 raise ValueError("invalid placement")
         return False
-
-
-
-###############################################################################
-#  Setup functions                                                            #
-###############################################################################
-
-
 
 
 def file_to_grid(fpath, nets, height=7):

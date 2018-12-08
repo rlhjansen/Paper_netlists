@@ -1,5 +1,4 @@
 from code.classes.grid import Grid
-from code.alghelper import get_name_circuitfile, create_fpath
 
 import os
 
@@ -33,9 +32,12 @@ def create_circuit_datapath(gen, c, cX, x, y):
     print(abspath)
     return abspath
 
+def gen_from_established(gen, c, cX, x, y):
+    raise NotImplementedError
+
 def main(x, y):
     tot_gates = [100]
-    tot_nets = [80,100,120]
+    tot_nets = [60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,210]
     abspath = os.path.abspath(__file__)
     abspath = os.path.dirname(abspath)
     abspath = os.path.join(abspath, "data")
@@ -45,7 +47,7 @@ def main(x, y):
         os.makedirs(abspath)
     gen = len(os.listdir(abspath))
     for c in tot_gates:
-        for cX in range(5):
+        for cX in range(10):
             #c_datapath = create_circuit_path(g)
             newgrid = Grid([x, y], AH=True)
             newgrid.generate_gates(c)
@@ -56,8 +58,6 @@ def main(x, y):
                     netlistpath = create_net_datapath(gen, c, n, cX, x, y)
                     newgrid.generate_nets(n)
                     newgrid.write_nets(netlistpath)
-                    #print(newgrid)
-                    #print(newgrid.gate_coords)
                     newgrid.wipe_nets()
 
 

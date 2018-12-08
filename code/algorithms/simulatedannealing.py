@@ -10,8 +10,8 @@ import sys
 
 from ..classes.grid import file_to_grid
 from ..alghelper import swap_two_X_times
+from ..alghelper import combine_score
 from .optimizer import Optimizer
-
 
 
 class SA(Optimizer):
@@ -33,32 +33,35 @@ class SA(Optimizer):
         self.set_saveloc('sa', **kwargs)
         self.circuit = file_to_grid(self.circuit_path, None)
         self.circuit.read_nets(self.netlist_path)
-        self.current = self.circuit.get_random_net_order()
-        self.sol_len = 5000
         self.swaps = kwargs.get("swaps")
-        self.all_connected = False
-        self.sol_len = 5000000
-        self.sol_conn = 0
-        self.tot_nets = n
-        self.sol_conn = 0
+        self.best_ordering = kwargs.get("ordering")
         self.determine_anneal(**kwargs)
-        self.annealFunc = None
 
-    def run_algorithm(self, interval=100):
+        self.current = self.circuit.get_random_net_order()
         cur_conn, cur_len = self.circuit.solve_order(self.current)[:2]
-        self.current_score = [cur_conn, cur_len]
-        self.used_score = self.current_score[:]
+        self.cur_conn, self.cur_len = cur_conn, cur_len
+        self.current_score = combine_score(cur_conn, cur_len, self.best_ordering, self.n)
+        self.current = self.circuit.get_random_net_order()
+        self.used_score = self.current_score
         self.used = self.current[:]
+        self.used_conn, self.used_len = self.cur_conn, self.cur_len
         self.circuit.reset_nets()
         self.add_iter()
-        self.check_anneal(cur_conn, cur_len, 0)
+        self.circuit.disconnect()
+
+
+
+    def run_algorithm(self, interval=100):
+        self.circuit.connect()
         for i in range(1, self.iters):
             if not i % interval:
                 print("completed " + str(i//interval) + " batches of ", interval)
             self.current = swap_two_X_times(self.current, self.swaps)
             cur_conn, cur_len = self.circuit.solve_order(self.current)[:2]
             self.circuit.reset_nets()
-            self.check_anneal(cur_conn, cur_len, i)
+            self.cur_conn, self.cur_len = cur_conn, cur_len
+            self.current_score = combine_score(cur_conn, cur_len, self.best_ordering, self.n)
+            self.check_anneal(i)
             self.add_iter()
         print("finished gathering simulated annealing")
         self.save(used_scores=True, used_results=True, all_scores=True, all_results=True)
@@ -69,150 +72,62 @@ class SA(Optimizer):
     # Anneal Checks                                                #
     ################################################################
 
-    def check_anneal(self, cur_conn, cur_len, i):
-        if not self.all_connected:
-            if cur_conn > self.used_score[0]:
-                self.used = self.current
-                self.sol_conn = cur_conn
-                self.used_score = [cur_conn, cur_len]
-                self.sol_len = cur_len
-            elif cur_conn <= self.used_score[0]:
-                if self.anneal_conn(cur_conn, i):
-                    print("change sol order :: equal")
-                    self.used = self.current
-                    self.sol_conn = cur_conn
-                    self.used_score = [cur_conn, cur_len]
-                else:
-                    print("unchanged anneal")
-        else:
-            if cur_conn == self.tot_nets:
-                if self.sol_len > cur_len:
-                    self.used, self.sol_len = self.current, cur_len
-                    self.used_score = [cur_conn, cur_len]
-                elif self.anneal_len(cur_len, i):
-                    print("enter anneal len")
-                    self.used, self.sol_len = self.current, cur_len
-                    self.used_score = [cur_conn, cur_len]
-                else:
-                    print("unchanged anneal len")
+    def check_anneal(self, i):
+        if self.anneal(i):
+            print("change sol order :: equal")
+            self.used = self.current
+            self.used_score = self.current_score
+            self.used_conn, self.used_len = self.cur_conn, self.cur_len
 
-    def check_len_anneal(self, cur_conn, cur_len, i):
-        if self.sol_len > cur_len:
-            self.sol_conn, self.used, self.sol_len = cur_conn, self.current, cur_len
-        elif self.anneal_len(cur_len, i):
-            print("enter anneal len")
-            self.sol_conn, self.used, self.sol_len = cur_conn, self.current, cur_len
-        else:
-            print("unchanged anneal len")
-
-    def check_conn_anneal(self, cur_conn, cur_len, i):
-        if cur_conn > self.sol_conn:
-            self.sol_conn, self.used, self.sol_len = cur_conn, self.current, cur_len
-        elif self.anneal_len(cur_len, i):
-            print("enter anneal conn")
-            self.sol_conn, self.used, self.sol_len = cur_conn, self.current, cur_len
-        else:
-            print("unchanged anneal conn")
 
     ################################################################
     # Anneal Checks - Comparisons and temperatures                 #
     ################################################################
 
-    def linear_anneal_len(self, cur_len, i):
+    def linear_anneal(self, i):
         """
         :param i: iteration number i
         :returns: whether or not to accept an outcome
         """
-        chance = exp((-(cur_len - self.sol_len))/(self.T-(i)*self.T_step))
+        chance = exp((-(self.current_score - self.used_score))/(self.T-(i)*self.T_step))
         if random() < chance:
             return True
         else:
             return False
 
-    def linear_anneal_conn(self, cur_conn, i):
-        """
-        :param i: iteration number i
-        :returns: whether or not to accept an outcome
-        """
-        chance = exp((-(cur_conn - self.sol_conn))/(self.T-(i)*self.T_step))
-        if random() < chance:
-            return True
-        else:
-            return False
-
-    def logarithmic_anneal_len(self, cur_len, i):
+    def logarithmic_anneal(self, i):
         """
         :param i: iteration number i
         :returns: whether or not to accept an outcome
         """
         self.T = self.T_start/log(1+i)
-        chance = exp((-(cur_len - self.sol_len))/self.T)
-        print("current solution =", cur_len, "\nbest solution =", self.sol_len)
+        chance = exp((-(self.current_score - self.used_score))/self.T)
+        print("current solution =", self.cur_len, "\nbest solution =", self.used_len)
         if random() < chance:
             return True
         else:
             return False
 
-    def logarithmic_anneal_conn(self, cur_conn, i):
+    def exp_anneal(self, i):
         """
         :param i: iteration number i
         :returns: whether or not to accept an outcome
         """
-
-        self.T = self.T_start/log(1+i)
-        chance = exp(-(self.sol_conn - cur_conn)/self.T)
-        if random() < chance:
-            return True
-        else:
-            return False
-
-    def exp_anneal_conn(self, difference, i):
-        """
-        :param i: iteration number i
-        :returns: whether or not to accept an outcome
-        """
-
-        T = self.exp_temp(i + 1)
-        if exp(difference / T) > random():
+        Temp = self.exp_temp(i + 1)
+        if exp(-(self.current_score - self.used_score) / Temp) > random():
             print("returned True, changing")
             return True
         else:
             print("returned False, not changing")
             return False
 
-    def exp_anneal_len(self, difference, i):
+    def geman_anneal(self, i):
         """
         :param i: iteration number i
         :returns: whether or not to accept an outcome
         """
-        T = self.exp_temp(i+1)
-        if exp(difference / T) > random():
-            print("returned True, changing")
-            return True
-        else:
-            print("returned False, not changing")
-            return False
-
-    def geman_anneal_len(self, difference, i):
-        """
-        :param i: iteration number i
-        :returns: whether or not to accept an outcome
-        """
-        T = self.c / log(i+self.d)
-        if exp(difference / T) > random():
-            print("returned True, changing")
-            return True
-        else:
-            print("returned False, not changing")
-            return False
-
-    def geman_anneal_conn(self, difference, i):
-        """
-        :param i: iteration number i
-        :returns: whether or not to accept an outcome
-        """
-        T = self.c / log(i+self.d)
-        if exp(difference / T) > random():
+        T = self.cv / log(i+self.dv)
+        if exp(-(self.current_score - self.used_score) / T) > random():
             print("returned True, changing")
             return True
         else:
@@ -235,31 +150,26 @@ class SA(Optimizer):
             1 (anneal function type) 'linear', 'log', 'exp', 'geman'
             2+ algorithms specific
         """
-        self.annealFunc = self.check_anneal
 
         schema = kwargs.get("schema", None)
         start_temp = kwargs.get("start_temp", None)
         end_temp = kwargs.get("end_temp", None)
 
         if schema == 'linear':
-            self.anneal_conn = self.linear_anneal_conn
-            self.anneal_len = self.linear_anneal_len
+            self.anneal = self.linear_anneal
             self.T = start_temp
             self.T_step = start_temp/(self.iters+1)
         elif schema == 'log':
             self.T_start = start_temp # Starting Temperature
-            self.anneal_conn = self.logarithmic_anneal_conn
-            self.anneal_len = self.logarithmic_anneal_len
+            self.anneal = self.logarithmic_anneal
         elif schema == 'exp':
             self.st = start_temp # Starting Temperature
             self.et = end_temp # End Temperature
-            self.anneal_conn = self.exp_anneal_conn
-            self.anneal_len = self.exp_anneal_len
+            self.anneal = self.exp_anneal
         elif schema == 'geman':
-            self.anneal_len = self.geman_anneal_len
-            self.anneal_conn = self.geman_anneal_conn
-            self.c = kwargs.get("cv", None) # largest barrier, arbitrarily chosen
-            self.d = kwargs.get("dv", None) # arbitrarily chosen
+            self.anneal = self.geman_anneal
+            self.cv = kwargs.get("cv", None) # largest barrier, arbitrarily chosen
+            self.dv = kwargs.get("dv", None) # arbitrarily chosen
 
 
 if __name__ == '__main__':

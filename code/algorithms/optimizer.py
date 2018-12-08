@@ -1,6 +1,7 @@
 import os
 
 from ..classes.grid import file_to_grid
+from ..alghelper import combine_score
 
 
 class Optimizer:
@@ -15,9 +16,11 @@ class Optimizer:
         self.generated = kwargs.get("generated", generated) #either test circuits or generated circuits
         self.iters = iters
         self.used_results = []
+        self.used_cl = []
         self.used_scores = []
         self.all_results = []
         self.all_scores = []
+        self.all_cl = []
         self.setup_load_paths()
 
     def make_circuit(self, *args):
@@ -30,8 +33,10 @@ class Optimizer:
     def add_iter(self, _print=False):
         self.used_scores.append(self.used_score)
         self.used_results.append(self.used)
+        self.used_cl.append([self.used_len, self.used_conn])
         self.all_results.append(self.current)
         self.all_scores.append(self.current_score)
+        self.all_cl.append([self.cur_len, self.cur_conn])
         if _print:
             print(self.used_scores)
             #print(self.used_results)
@@ -43,8 +48,10 @@ class Optimizer:
         orders = [elem[2] for elem in batch_results]
 
         self.all_results.extend(orders)
-        self.all_scores.extend(scores)
+        self.all_scores.extend([combine_score(score[0], score[1], scoring=self.best_ordering, total_nets=self.n) for score in scores])
+        self.all_cl.extend([",".join([str(spart) for spart in score]) for score in scores])
         self.all_results.append("----")
+        self.all_scores.append("----")
         self.all_scores.append("----")
 
 
@@ -56,6 +63,7 @@ class Optimizer:
         abspath = os.path.dirname(abspath)
         abspath = os.path.join(abspath, "data")
         if self.generated:
+            abspath = os.path.join(abspath, "official_reference")
             abspath = os.path.join(abspath, "generated")
             abspath = os.path.join(abspath, "x"+str(self.x)+"y"+str(self.y))
             abspath = os.path.join(abspath, "g0")
@@ -83,7 +91,7 @@ class Optimizer:
 
 
         if algtype == 'hc':
-            abspath = self.saveloc_hc(abspath)
+            abspath = self.saveloc_hc(abspath, **kwargs)
         if algtype == 'sa':
             abspath = self.saveloc_sa(abspath, **kwargs)
         if algtype == 'ppa':
@@ -113,7 +121,7 @@ class Optimizer:
 
 
     @staticmethod
-    def saveloc_hc(abspath):
+    def saveloc_hc(abspath, **kwargs):
         abspath = os.path.join(abspath, "HC")
         assert "swaps" in kwargs
         return os.path.join(abspath, "SW" + str(kwargs.get("swaps")))
@@ -134,9 +142,9 @@ class Optimizer:
         if "end_temp" in kwargs:
             abspath = os.path.join(abspath, "ET" + str(kwargs.get("end_temp")))
 
-        if "c" in kwargs:
+        if "cv" in kwargs:
             abspath = os.path.join(abspath, "cv" + str(kwargs.get("cv")))
-        if "d" in kwargs:
+        if "dv" in kwargs:
             abspath = os.path.join(abspath, "dv" + str(kwargs.get("dv")))
 
         assert "swaps" in kwargs
@@ -166,7 +174,7 @@ class Optimizer:
         assert "pop_cut" in kwargs
         abspath = os.path.join(abspath, "P"+str(kwargs.get("pop_cut")))  #popsize
         assert "best_percent" in kwargs
-        abspath = os.path.join(abspath, "pcnt"+str(kwargs.get("best_percent")))  #percentage best
+        abspath = os.path.join(abspath, "BP"+str(kwargs.get("best_percent")))  #percentage best
         assert "arbitrary" in kwargs
         abspath = os.path.join(abspath, "A"+str(kwargs.get("arbitrary")))  #arbitrary
         assert "distance" in kwargs
@@ -178,12 +186,14 @@ class Optimizer:
     def save(self, used_scores=False, used_results=False, all_scores=False, all_results=False):
         if used_scores:
             self.save_used_scores()
+            self.save_used_cl()
             print("saved used scores")
         if used_results:
             self.save_used_results()
             print("saved used")
         if all_scores:
             self.save_all_scores()
+            self.save_all_cl()
             print("saved all scores")
         if all_results:
             self.save_all_results()
@@ -193,18 +203,27 @@ class Optimizer:
     def save_used_scores(self):
         savefile = os.path.join(self.savedir, 'used_scores.txt')
         with open(savefile, 'w') as sf:
-            sf.write("\n".join([",".join([str(spart) for spart in score]) for score in self.used_scores]))
+            sf.write("\n".join([str(score) for score in self.used_scores]))
 
     def save_used_results(self):
         savefile = os.path.join(self.savedir, 'used_results.txt')
         with open(savefile, 'w+') as sf:
             sf.write("\n".join([",".join([net for net in line]) for line in self.used_results]))
 
+    def save_used_cl(self):
+        savefile = os.path.join(self.savedir, 'used_cl.txt')
+        with open(savefile, 'w+') as sf:
+            sf.write("\n".join([",".join([str(sp) for sp in score]) for score in self.used_cl]))
+
+    def save_all_cl(self):
+        savefile = os.path.join(self.savedir, 'all_cl.txt')
+        with open(savefile, 'w+') as sf:
+            sf.write("\n".join([",".join([str(sp) for sp in score]) for score in self.all_cl]))
+
     def save_all_scores(self):
         savefile = os.path.join(self.savedir, 'all_scores.txt')
         with open(savefile, 'w+') as sf:
-            sf.write("\n".join([",".join([str(spart) for spart in score]) for score in self.all_scores]))
-
+            sf.write("\n".join([str(score) for score in self.all_scores]))
 
     def save_all_results(self):
         savefile = os.path.join(self.savedir, 'all_results.txt')

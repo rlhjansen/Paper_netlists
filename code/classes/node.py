@@ -20,7 +20,6 @@ class Node:
     def set_value(self, value):
         if self.is_occupied():
             raise ValueError("node already occupied")
-
         self.value = value
         if value[0] == 'g':
             self.gate = True
@@ -32,7 +31,6 @@ class Node:
     def add_base_outgoing(self):
         self.base_outgoing_nets += 1
 
-
     def get_value(self):
         """
         :return: string "0", "gX", or "nY"
@@ -40,9 +38,6 @@ class Node:
         return self.value
 
     def get_neighbours(self):
-        """
-        :return: list of neighbouring node objects
-        """
         return self.neighbours
 
     def get_neighbour_order_to(self, end_loc):
@@ -51,9 +46,6 @@ class Node:
         return nnl
 
     def get_coord(self):
-        """
-        :return: coordinate at which th node lies
-        """
         return self.coord
 
     def is_occupied(self):
@@ -63,14 +55,10 @@ class Node:
         return self.gate or self.net
 
     def is_gate(self):
-        """
-        :return: True if node is a gate, else False
-        """
         return self.gate
 
     def is_net(self):
         return self.net
-
 
     def get_adjecent_occupied(self):
         """
@@ -88,7 +76,6 @@ class Node:
         note: for netlist creation, not for routing
 
         :return: True if node has room for an additional outgoing net,
-         False otherwise.
         """
         count = self.get_adjecent_occupied() + len(self.out_nets)
         if count < self.neighbour_num:
@@ -98,14 +85,13 @@ class Node:
 
     def has_space(self):
         """
-
+        note: not for netlist creation, for routing
         """
         count = 0
         for n in self.neighbours:
             if not n.is_occupied():
                 count += 1
         return count
-
 
     def add_net(self, net):
         """
@@ -119,7 +105,6 @@ class Node:
             raise ValueError("cannot add net to non-gate node")
             print("a net should not be added here")
 
-
     def connect(self, neighbours):
         """
         :param neighbours: tuple (neighbouring) of Node objects
@@ -131,7 +116,6 @@ class Node:
     def disconnect(self):
         self.neighbours = []
         self.neighbour_num = 0
-
 
     def satisfies_height(self, h):
         """
@@ -168,7 +152,6 @@ class Node:
     def incr_outgoing(self):
         self.cur_outgoing += 1
 
-
     def check_necessity(self):
         for n in self.neighbours:
             if n.is_gate():
@@ -178,7 +161,6 @@ class Node:
 
     def needs_space(self):
         return self.base_outgoing_nets - self.cur_outgoing
-
 
     def is_blocked_in(self):
         for neighbour in self.neighbours:

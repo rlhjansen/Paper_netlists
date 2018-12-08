@@ -12,8 +12,6 @@ from .optimizer import Optimizer
 from ..classes.grid import file_to_grid
 from ..alghelper import \
     combine_score, \
-    quicksort, \
-    split_score, \
     swap_two_X_times
 
 
@@ -51,22 +49,19 @@ class PPASELA(Optimizer):
         self.best_ordering = kwargs.get("ordering")
         self.arbitrary = kwargs.get("arbitrary")
         self.best_percent = kwargs.get("best_percent")
-
         self.tot_nets = n
-
+        circuit_count = self.calc_neccesary_circuits()
         pool = mp.Pool(processes=self.workercount)
-        self.circuits = pool.map(self.make_circuit, [_ for _ in range(max(self.pop_cut, int(self.pop_cut*self.best_percent*self.arbitrary*3)))])
+        self.circuits = pool.map(self.make_circuit, [_ for _ in range(circuit_count)])
         pool.close()
 
         self.pop = [self.circuits[0].get_random_net_order() for i in range(self.pop_cut)]
+        self.pop_score = [0]*self.pop_cut
 
-        if self.best_ordering == 'max':
-            self.pop_score = [0]*self.pop_cut
-        elif self.best_ordering == 'min':
-            self.pop_score = [self.n]*self.pop_cut
-
-        self.ofv = combine_score
-
+    def calc_neccesary_circuits(self):
+        fp = sum([ceil(self.arbitrary/(i+1)) for i in range(ceil(self.pop_cut*self.best_percent))])
+        sp = self.pop_cut - ceil(self.pop_cut*self.best_percent)
+        return fp+sp
 
     def run_algorithm(self):
         """ See paper Selamoglu & Salhi:
@@ -94,18 +89,14 @@ class PPASELA(Optimizer):
 
             for inst in data_clo:
                 (cur_conn, cur_len, cur_order, index) = inst
-                runner_eval = combine_score(cur_conn, cur_len, scoring=self.best_ordering, total_nets=self.tot_nets)
+                self.current_score = combine_score(cur_conn, cur_len, self.best_ordering, self.n)
                 if runner_eval > self.pop_score[index]:
                     self.pop[index], self.pop_score[index] = cur_order, runner_eval
 
             zipped = zip(self.pop, self.pop_score)
-
-            if self.best_ordering == "max":
-                resorted = list(zip(*sorted(zipped, key=lambda x: -x[1])))
-            if self.best_ordering == "min":
-                resorted = list(zip(*sorted(zipped, key=lambda x: x[1])))
-
+            resorted = list(zip(*sorted(zipped, key=lambda x: -x[1])))
             self.pop, self.pop_score = list(resorted[0]), list(resorted[1])
+
             print("generation done")
         self.save(all_scores=True, all_results=True)
 
@@ -121,7 +112,7 @@ class PPASELA(Optimizer):
 
         for inst in qslist:
             (cur_conn, cur_len, cur_order, index) = inst
-            runner_eval = combine_score(cur_conn, cur_len, scoring=self.best_ordering, total_nets=self.tot_nets)
+            runner_eval = combine_score(cur_conn, cur_len, self.best_ordering, self.n)
             self.pop[index], self.pop_score[index] = cur_order, runner_eval
         self.add_iter_batch(data_clo)
 
@@ -135,31 +126,23 @@ class PPASELA(Optimizer):
         """
         scores = []
         for inst in data_clo:
-            scores.append(combine_score(inst[0], inst[1],
-                                        scoring=self.best_ordering,
-                                        total_nets=self.tot_nets))
-
-        if self.best_ordering == "max":
-            qslist = [x for _, x in
-                      sorted(zip(scores, data_clo), key=lambda x: -x[0])]
-        if self.best_ordering == "min":
-            print("enter min")
-            qslist = [x for _, x in
-                      sorted(zip(scores, data_clo), key=lambda x: x[0])]
+            scores.append(combine_score(inst[0], inst[1], self.best_ordering, self.n))
+        qslist = [x for _, x in sorted(zip(scores, data_clo), key=lambda x: -x[0])]
         return scores, qslist
+
 
 def multi_run(gps):
     gps[0].connect()
     satisfies = gps[0].solve_order(gps[1])
 
-    cur_conn, cur_len, tot_tries = satisfies[:3]
+    cur_conn, cur_len = satisfies[:2]
     plant_data = (cur_conn, cur_len, tuple(gps[1]))
     return plant_data
 
 def multi_selamoglu(gpis):
     gpis[0].connect()
     satisfies = gpis[0].solve_order(gpis[1][0])
-
-    cur_conn, cur_len, tot_tries = satisfies[:3]
+    # print(gpis[1][0])
+    cur_conn, cur_len = satisfies[:2]
     plant_data = (cur_conn, cur_len, tuple(gpis[1][0]), gpis[1][1])
     return plant_data

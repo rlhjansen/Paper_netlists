@@ -1,6 +1,4 @@
 
-
-
 # Replication:
 ## creating your own data:
 
@@ -20,20 +18,20 @@ runs are given tags to avoid overwriting files through git when collecting data 
 
 # directory structure:
 
---code
-----algorithms
-----classes
-----visualization
---data
-----baseline
-----generated
---results
-----circuit size
-------generated series
---------circuits ordered by total gates
-----------specific circuits
-------------netlists ordered by total nets
---------------specific netlist
+1. code
+    - algorithms
+    - classes
+    - visualization
+2. data
+    - baseline
+    - generated
+3. results
+    - circuit size
+        - generated series
+            - circuits ordered by total gates
+                - specific circuits
+                    - netlists ordered by total nets
+                        - specific netlist
 
 # authors:
 

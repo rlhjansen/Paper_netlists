@@ -12,7 +12,6 @@ import sys
 from .optimizer import Optimizer
 from ..classes.grid import file_to_grid
 from ..alghelper import combine_score, \
-    split_score, \
     swap_two_X_times
 
 
@@ -41,7 +40,6 @@ class PPA(Optimizer):
         pool.close()
 
         self.pop = [self.circuits[0].get_random_net_order() for i in range(self.pop_cut)]
-
         self.tot_nets = n
         self.ofv = combine_score
         self.init_pop()
@@ -51,16 +49,14 @@ class PPA(Optimizer):
         data_clo = pool.map(multi_run, [(self.circuits[ind], self.pop[ind]) for ind in range(len(self.pop))])
         scores, qslist = self.sort_data(data_clo)
         qslen = len(qslist)
-        scores = tuple([self.ofv(qslist[i][0], qslist[i][1], scoring=self.best_ordering, total_nets=self.tot_nets) for i in range(qslen)])
+        scores = tuple([self.ofv(qslist[i][0], qslist[i][1], self.best_ordering, self.tot_nets) for i in range(qslen)])
         orderlist = [qslist[i][2] for i in range(qslen)]
         zipped = zip(scores, orderlist)
         new_ranking = sorted(zipped, key=lambda x: -x[0])
         tot = [plant for plant in zip(*new_ranking)]
-
         self.last_pop = self.pop
         self.last_scores = tot[0]
         self.add_iter_batch(data_clo)
-
 
 
     def fitnesses_to_newpop(self, scores, orders):
@@ -68,7 +64,6 @@ class PPA(Optimizer):
 
         original mapping fitness:
             0.5 * (tanh(4*score - 2) + 1)
-
 
         original distance function:
             2*(1-mrank)*(random()-0.5)
@@ -78,7 +73,7 @@ class PPA(Optimizer):
             (1-mrank)*random()
             -->  maps greater ranks closer to 0
 
-        :param orders: best placement orders of last generaion
+        :param orders: best placement orders of last generation
         :returns: new population plants to be considered
         """
         newpop = []
@@ -146,23 +141,15 @@ class PPA(Optimizer):
             The the goal of the function is to maximize z which should yield
             similar goal results
 
-        *  Elitism: amount of the most recent selection that is retained
-            in the new generation
-
         """
 
         qslen = len(qslist)
-        scores = tuple([self.ofv(qslist[i][0], qslist[i][1], scoring=self.best_ordering, total_nets=self.tot_nets) for i in range(qslen)])
+        scores = tuple([self.ofv(qslist[i][0], qslist[i][1], self.best_ordering, self.n) for i in range(qslen)])
         orderlist = tuple([qslist[i][2] for i in range(qslen)])
-
         tot = self.combine_old_new(scores, orderlist)
+
         plant_scores = tot[0][:self.pop_cut]
-        plant_orders = tot[1]
-        plant_orders = plant_orders[:self.pop_cut]
-
-        best_con, best_len = split_score(plant_scores[0])
-        print("plant_orders", plant_orders)
-
+        plant_orders = tot[1][:self.pop_cut]
 
         self.last_pop = tot[1]
         self.last_scores = tuple(tot[0])
@@ -173,16 +160,10 @@ class PPA(Optimizer):
             fitnesses = [0.5 for _ in plant_scores]
         else:
             fitnesses = [(score-zMin)/(zMax-zMin) for score in plant_scores]
-
         self.pop = self.fitnesses_to_newpop(fitnesses, plant_orders)
 
 
-
     def run_algorithm(self):
-        """main loop, generates evaluates & saves "plants" per generation.
-
-        """
-        #Todo Distance function implementation (swap, reverse, other)
         done = 0
         while self.iters - done > 0:
             print("starting generation")
@@ -191,10 +172,8 @@ class PPA(Optimizer):
             pool.close()
             self.add_iter_batch(data_clo)
             scores, qslist = self.sort_data(data_clo)
-            print("qslist", qslist)
             self.populate(qslist[:self.pop_cut])
             done += len(data_clo)
-            print(done)
         self.save(all_scores=True, all_results=True)
 
 
@@ -206,17 +185,9 @@ class PPA(Optimizer):
         """
         scores = []
         for inst in data_clo:
-            scores.append(combine_score(inst[0], inst[1],
-                                        scoring=self.best_ordering,
-                                        total_nets=self.tot_nets))
+            scores.append(self.ofv(inst[0], inst[1], self.best_ordering, self.n))
 
-        if self.best_ordering == "max":
-            qslist = [x for _, x in
-                      sorted(zip(scores, data_clo), key=lambda x: -x[0])]
-        if self.best_ordering == "min":
-            print("enter min")
-            qslist = [x for _, x in
-                      sorted(zip(scores, data_clo), key=lambda x: x[0])]
+        qslist = [x for _, x in sorted(zip(scores, data_clo), key=lambda x: -x[0])]
         return scores, qslist
 
 def multi_run(gps):

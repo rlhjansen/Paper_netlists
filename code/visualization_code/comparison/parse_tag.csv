@@ -1,0 +1,34 @@
+# incomplete tag, description, keyword
+# * is to be filled by a number
+# the tag is searched for in the results directory, all matching files are associated with the tag,
+# Results can be compared with each other by set intersection
+#
+# algorithms specific tags
+#
+C[0-9]*, circuit with ** gates
+C[0-9]*_[0-9]*, circuit with *** gates
+N[0-9]*_[0-9]*, Netlist with ** nets
+N[0-9]*, Netlist with *** nets
+x[0-9]*y[0-9]*, circuit unit-size
+SW[0-9]*, swaps done on change
+S[a-z]*, simulated annealing cooling scheme
+T[0-9]*, start temperature simulated annealing
+ET[0-9]*, end temperature simulated annealing
+cv[0-9]*, c-value geman-scheme
+dv[0-9]*, c-value geman-scheme
+P[0-9]*, population size ppa
+R[0-9]*, maxrunners for best candidate plant
+D[0-9]*, maxdistance for worst candidate plant
+BP[0-9|\.]*, best percentage for which distance is variable (selamoglu)
+A[0-9]*, arbitrary parameter for selamoglu
+O[a-z]*, ppa ordering
+used_scores, used scores -> scores on which order changes are based, US
+all_scores, used scores -> scores on which order changes are based, AS
+#
+# algorithms
+#
+HC, Hill-Climber
+SA, Simulated Annealing
+RC, Random
+PPA, Plant propagation
+SELA, Plant propagation discretised/selamoglu version
