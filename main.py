@@ -86,7 +86,7 @@ def run_generated(tag, generated=True, spec=None):
     netlists = 3
     x = 30
     y = 30
-    iters = 30
+    iters = 10000
     ordering = "percdiv"
     while True:
         for c in gates:
@@ -119,7 +119,7 @@ def run_baseline(tag, generated=False, spec=None):
     netlists = 1
     x = 30
     y = 30
-    iters = 1000
+    iters = 10000
     ordering = "percdiv"
     while True:
         for i, c in enumerate(gates):
