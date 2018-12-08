@@ -158,6 +158,7 @@ def parse_args(args):
             else:
                 if "spec" in sys.argv:
                     inp = input("type which algs you want to try out\n(ppa, sela, sa, hc, rc)")
+                    inp = inp.split(" ")
                 else:
                     inp = None
                 if "baseline" in sys.argv:
