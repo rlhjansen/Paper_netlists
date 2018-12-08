@@ -90,8 +90,8 @@ class PPASELA(Optimizer):
             for inst in data_clo:
                 (cur_conn, cur_len, cur_order, index) = inst
                 self.current_score = combine_score(cur_conn, cur_len, self.best_ordering, self.n)
-                if runner_eval > self.pop_score[index]:
-                    self.pop[index], self.pop_score[index] = cur_order, runner_eval
+                if self.current_score > self.pop_score[index]:
+                    self.pop[index], self.pop_score[index] = cur_order, self.current_score
 
             zipped = zip(self.pop, self.pop_score)
             resorted = list(zip(*sorted(zipped, key=lambda x: -x[1])))
