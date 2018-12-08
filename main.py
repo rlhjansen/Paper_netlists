@@ -97,13 +97,13 @@ def run_generated(tag, generated=True, spec=None):
                             if "sa" in spec:
                                 sa_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
                             if "hc" in spec:
-                            hc_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
+                                hc_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
                             if "sela" in spec:
-                            sela_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
+                                sela_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
                             if "ppa" in spec:
-                            ppa_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
+                                ppa_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
                             if "rc" in spec:
-                            rc_cycle(c, cX, n, nX, x, y, tag, generated, iters)
+                                rc_cycle(c, cX, n, nX, x, y, tag, generated, iters)
                         else:
                             sa_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
                             hc_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
@@ -130,13 +130,13 @@ def run_baseline(tag, generated=False, spec=None):
                             if "sa" in spec:
                                 sa_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
                             if "hc" in spec:
-                            hc_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
+                                hc_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
                             if "sela" in spec:
-                            sela_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
+                                sela_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
                             if "ppa" in spec:
-                            ppa_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
+                                ppa_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
                             if "rc" in spec:
-                            rc_cycle(c, cX, n, nX, x, y, tag, generated, iters)
+                                rc_cycle(c, cX, n, nX, x, y, tag, generated, iters)
                         else:
                             sa_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
                             hc_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
