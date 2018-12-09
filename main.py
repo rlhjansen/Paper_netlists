@@ -59,22 +59,15 @@ def sa_cycle(c, cX, n, nX, x, y, tag, generated, iters, ord):
     pool.close()
 
 def hc_cycle(c, cX, n, nX, x, y, tag, generated, iters, ord):
-    swapss = [1,2,3]
-    # pool = mp.Pool(processes=None)
-    # HCs = [hc.HC(c, cX, n, nX, x, y, tag, iters=iters, generated=generated, swaps=s, ordering=ord) for s in swapss]
-    # pool.map(multi_run_pure_iterative, HCs)
-    # pool.close()
-    HC = hc.HC(c, cX, n, nX, x, y, tag, iters=iters, generated=generated, swaps=1, ordering=ord)
-    HC.run_algorithm()
+    swapss = [1,2,3,4,5,6,7]
+    pool = mp.Pool(processes=None)
+    HCs = [hc.HC(c, cX, n, nX, x, y, tag, iters=iters, generated=generated, swaps=s, ordering=ord) for s in swapss]
+    pool.map(multi_run_pure_iterative, HCs)
+    pool.close()
 
-def hc_cycle(c, cX, n, nX, x, y, tag, generated, iters, ord):
-    swapss = [1,2,3]
-    # pool = mp.Pool(processes=None)
-    # HCs = [hc.HC(c, cX, n, nX, x, y, tag, iters=iters, generated=generated, swaps=s, ordering=ord) for s in swapss]
-    # pool.map(multi_run_pure_iterative, HCs)
-    # pool.close()
-    HC = hc.HC(c, cX, n, nX, x, y, tag, iters=iters, generated=generated, swaps=1, ordering=ord)
-    HC.run_algorithm()
+def rc_cycle(c, cX, n, nX, x, y, tag, generated, iters, ord):
+    RC = rc.RC(c, cX, n, nX, x, y, tag, iters=iters, generated=generated, swaps=s, ordering=ord)
+    RC.run_algorithm()
 
 def multi_run_pure_iterative(alg_object):
     alg_object.run_algorithm()
