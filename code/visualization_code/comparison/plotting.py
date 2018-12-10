@@ -68,14 +68,14 @@ class resfile_reader:
 
     @staticmethod
     def plot_single_iterative(file):
-        data = [[i, int(l.split(',')[0])] for i, l in enumerate(open(file, 'r').readlines())]
+        data = [[i, float(l.split(',')[0])] for i, l in enumerate(open(file, 'r').readlines())]
         connections = [d[1] for d in data]
         index = [d[0] for d in data]
         plt.plot(index, connections)
 
     @staticmethod
     def plot_single_best_iterative(file):
-        data = [[i, int(l.split(',')[0])] for i, l in enumerate(open(file, 'r').readlines())]
+        data = [[i, float(l.split(',')[0])] for i, l in enumerate(open(file, 'r').readlines())]
         connections = [d[1] for d in data]
         best = 0
         bc = []
@@ -89,7 +89,7 @@ class resfile_reader:
 
     @staticmethod
     def plot_going_best_generational(file):
-        data = [int(l.split(',')[0]) for i, l in enumerate(open(file, 'r').readlines()) if l[0] != "-"]
+        data = [float(l.split(',')[0]) for i, l in enumerate(open(file, 'r').readlines()) if l[0] != "-"]
 
         connections = [d for d in data if d != "-"]
         bc = []
@@ -117,7 +117,9 @@ class resfile_reader:
 
 if __name__ == '__main__':
     rfr = resfile_reader()
-    tags = ["SA", "N80"]
-    rfr.plot_all_best_with_tags(tags)
-    tags = ["PPA"]
-    rfr.plot_all_best_with_tags(tags)
+    while True:
+        tags = input().split(" ")
+        rfr.plot_all_best_with_tags(tags)
+    # tags = ["SA", "N80"]
+    # tags = ["PPA"]
+    # rfr.plot_all_best_with_tags(tags)
