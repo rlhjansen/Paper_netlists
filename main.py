@@ -65,7 +65,7 @@ def hc_cycle(c, cX, n, nX, x, y, tag, generated, iters, ord):
     pool.map(multi_run_pure_iterative, HCs)
     pool.close()
 
-def rc_cycle(c, cX, n, nX, x, y, tag, generated, iters, ord):
+def rc_cycle(c, cX, n, nX, x, y, tag, generated, iters):
     RC = rc.RC(c, cX, n, nX, x, y, tag, iters=iters, generated=generated, swaps=s, ordering=ord)
     RC.run_algorithm()
 

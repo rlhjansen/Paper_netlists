@@ -3,9 +3,6 @@ import re
 
 
 
-def makepatern(value):
-    return eval("r'"+value+"'")
-
 def lprint(l):
     for elem in l:
         print(elem)
@@ -40,30 +37,20 @@ def parse_tags(filename, tagindex):
 class IDparser:
     def __init__(self):
         self.set_file_list()
-        self.get_filenames()
+        self.set_ftags()
         self.set_tagsdict()
-        self.subset_results_files = []
+        self.resdict = {}
 
 
     def iter_change(self):
-        print("what")
+        self.show_commondict()
         tags = input("enter tags:").split(" ")
-        i = input("enter index:")
-        self.make_commondict(tags, i)
+        self.make_commondict(tags)
 
     def show_commondict(self):
-        for tdict in self.subset_results_files:
-            print(tdict.keys())
+        print(self.resdict.keys())
 
-
-    def make_commondict(self, tags, index):
-        resdict = self.get_commondict(tags)
-        if index == "":
-            self.subset_results_files.append(resdict)
-        else:
-            self.subset_results_files[index] = resdict
-
-    def get_commondict(self, tags):
+    def set_commondict(self, tags):
         result_sets = [self.tagsdict.get(tag) for tag in tags]
         print(tags, len(result_sets))
         try:
@@ -71,7 +58,6 @@ class IDparser:
         except TypeError:
             print("invalid argument, given tag (" + " ".join(tags) + ") not in dictionary of index")
             return
-
         resdict = {}
         for elem in commonset:
             for tag in elem[0]:
@@ -80,13 +66,14 @@ class IDparser:
                 except KeyError:
                     resdict[tag] = set()
                     resdict[tag].add(elem)
+        self.resdict = resdict
         return resdict
 
 
-
-    def get_filenames(self):
+    def set_ftags(self):
         tagindex = self.files[0].index("results")
         self.ftags = [parse_tags(fn, tagindex) for fn in self.files]
+        print("ftags", self.ftags[0][0])
 
     def set_file_list(self):
         sdname = get_subdir(find_pardir("Paper_netlists"), "results")

@@ -46,17 +46,19 @@ class resfile_reader:
 
 
     def plot_all_best_with_tags(self, tags):
-        cmnd = self.idp.get_commondict(tags)
+        cmnd = self.idp.set_commondict(tags)
         if "PPA" in tags or "SELA" in tags:
             endtag = "all_scores.txt"
             files = [elem[1] for elem in cmnd[tags[0]] if elem[1][-len(endtag):] == endtag]
             for file in files:
                 self.plot_going_best_generational(file)
-        else:
+        elif set(["SA", "HC"]).intersection(set(tags)):
             endtag = "used_scores.txt"
             files = [elem[1] for elem in cmnd[tags[0]] if elem[1][-len(endtag):] == endtag]
             for file in files:
                 self.plot_single_best_iterative(file)
+        else:
+            raise ValueError("call without algorithm")
         plt.show()
 
     def plot_first_generational_with_tags(self, tags):
@@ -116,5 +118,8 @@ class resfile_reader:
 
 if __name__ == '__main__':
     rfr = resfile_reader()
-    tags = ["SELA"]
-    rfr.plot_all_best_with_tags(tags)
+    tags = ["SELA", "C100"]
+    while tags:
+        rfr.plot_all_best_with_tags(tags)
+        rfr.idp.show_commondict()
+        tags = input().split(" ")

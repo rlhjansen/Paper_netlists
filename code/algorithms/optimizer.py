@@ -49,7 +49,7 @@ class Optimizer:
 
         self.all_results.extend(orders)
         self.all_scores.extend([combine_score(score[0], score[1], scoring=self.best_ordering, total_nets=self.n) for score in scores])
-        self.all_cl.extend([",".join([str(spart) for spart in score]) for score in scores])
+        self.all_cl.extend(scores)
         self.all_results.append("----")
         self.all_scores.append("----")
         self.all_scores.append("----")
