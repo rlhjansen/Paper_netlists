@@ -328,7 +328,3 @@ def mean(_list):
 if True:
     da = DataAccumulator()
     da.mainloop()
-
-
-
-

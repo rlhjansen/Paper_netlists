@@ -89,7 +89,7 @@ class resfile_reader:
 
     @staticmethod
     def plot_going_best_generational(file):
-        data = [int(l.split(',')[0]) for i, l in enumerate(open(file, 'r').readlines()) if l[0] != "-"]
+        data = [float(l.split(',')[0]) for i, l in enumerate(open(file, 'r').readlines()) if l[0] != "-"]
 
         connections = [d for d in data if d != "-"]
         bc = []
@@ -109,7 +109,6 @@ class resfile_reader:
                 generation_index_correction += 1
         c_choice = random.choice(plt.rcParams['axes.prop_cycle'].by_key()['color'])
         plt.plot(index, bc, c=c_choice)
-        print(len(generation_indices))
         # for xvl in generation_indices:
         #     plt.axvline(xvl, c=c_choice)
 
@@ -117,7 +116,5 @@ class resfile_reader:
 
 if __name__ == '__main__':
     rfr = resfile_reader()
-    tags = ["SA", "N80"]
-    rfr.plot_all_best_with_tags(tags)
-    tags = ["PPA"]
+    tags = ["SELA"]
     rfr.plot_all_best_with_tags(tags)
