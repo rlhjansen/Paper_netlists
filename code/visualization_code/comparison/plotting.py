@@ -1,9 +1,14 @@
 
 import random
+import sys
+
 import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+
+
 from IDparser import IDparser
 
-import sys
 
 def lprint(iterable, join=""):
     for elem in iterable:
@@ -115,11 +120,75 @@ class resfile_reader:
         #     plt.axvline(xvl, c=c_choice)
 
 
+    def make_files_d(self, tags):
+        cmnd = self.idp.set_commondict(tags)
+        endtag = "scores.txt"
+        files = [elem[1] for elem in cmnd[tags[0]] if elem[1][-len(endtag):] == endtag]
+        file_score_dict = {}
+        for file in files:
+            if "RC" in tags:
+                raise ValueError("wrong function called, instead call 'get_rand_distribution(tags)'")
+            else:
+                if "PPA" in tags or "SELA" in tags:
+                    file_score_dict[file] = extract_file_generational(file)
+                elif "HC" in tags or "SA" in tags:
+                    file_score_dict[file] = extract_file_iterative(file)
+        best_file = sorted(files, key=lambda file : -file_score_dict[file]["max_val"])
+        file_score_dict["best"] = file_score_dict[best_file]
+        return file_score_dict
+
+
+
+    @staticmethod
+    def extract_file_iterative(file):
+        maximum = []
+        data = [float(line) for line in open(file, 'r').readlines()]
+
+        gen_info = {"min":[], "max":[], "mean":[]}
+        for gen in data:
+            gen_info["min"].append(min(gen))
+            gen_info["max"].append(max(gen))
+            gen_info["mean"].append(sum(gen)/len(gen))
+        gen_info["max_val"] = max(gen_info["max"])
+        return gen_info
+
+
+    @staticmethod
+    def extract_file_generational(file):
+        minimum = []
+        maximum = []
+        mean = []
+        data = [[]]
+        last_split = False
+        data_index = 0
+        generation_lines = []
+        for i, line in enumerate(open(file, 'r').readlines()):
+            if l[0] == '-':
+                if not last_split:   #Temporary fix for (fixed) mistake in saving implementation, remove after initial results
+                    data.append([])
+                    data_index += 1
+                    generation_lines.append(i - data_index)
+                last_split = True    #Temporary fix for (fixed) mistake in saving implementation, remove after initial results
+            else:
+                last_split = False   #Temporary fix for (fixed) mistake in saving implementation, remove after initial results
+                data[data_index].append(float(line))
+        gen_info = {"min":[], "max":[], "mean":[]}
+        for i, gen in enumerate(data):
+            gen_info["min"].append(min(gen))
+            gen_info["max"].append(max(gen))
+            gen_info["mean"].append(sum(gen)/len(gen))
+            gen_info["i"].append(generation_lines[i])
+        gen_info["max_val"] = max(gen_info["max"])
+        df = pd.DataFrame(data=gen_info)
+        return df
+
 
 if __name__ == '__main__':
     rfr = resfile_reader()
-    tags = ["SELA", "C100"]
-    while tags:
-        rfr.plot_all_best_with_tags(tags)
-        rfr.idp.show_commondict()
-        tags = input().split(" ")
+    selatags = ["SELA", "C100"]
+    sela_df = rfr.make_files_d(selatags)
+    df = sela_df["best"]
+    sns.tsplot((df['max']-df['mean']), df['i'],color=color)
+    sns.tsplot((df['min']-df['mean']), df['i'],color=color)
+    plt.fill_between(df['i'], (df['max']-df['mean']), (df['min']-df['mean']), color=color, alpha='0.5')
+    plt.show()

@@ -52,7 +52,7 @@ class Optimizer:
         self.all_cl.extend(scores)
         self.all_results.append("----")
         self.all_scores.append("----")
-        self.all_scores.append("----")
+        self.all_cl.append("----")
 
 
 
