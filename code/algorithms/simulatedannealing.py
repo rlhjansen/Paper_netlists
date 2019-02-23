@@ -30,7 +30,7 @@ class SA(Optimizer):
         :param additions:
         """
         Optimizer.__init__(self, c, cX, n, nX, x, y, iters, tag, **kwargs)
-        self.set_saveloc('sa', **kwargs)
+        self.set_saveloc('sap', **kwargs)
         self.circuit = file_to_grid(self.circuit_path, None)
         self.circuit.read_nets(self.netlist_path)
         self.swaps = kwargs.get("swaps")

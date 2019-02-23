@@ -1,0 +1,20 @@
+| onderzoeksvoorstel scrijven structuur angelo
+| methodesectie schrijven
++---> parameters beschrijven
+
+
+A| oplosbaarheid netlists voor 1 specefieke printplaat.
+ | printplaten genereren, niet uitsluiten unsolvable puzzels
+
+
+methode ->
+sections:
+2.1 Routing a netlist with A*
+2.2 experiment: aantallen, lengtes etc.
+
+resultaten ->
+A
+
+conclusie ->
+
+discussie

@@ -14,9 +14,10 @@ from .node import Node
 
 
 class Grid:
-    def __init__(self, size_params, solver="A_star", height=7,verbose=False, empty=False, AH=False, gates=None):
+    def __init__(self, size_params, solver="A_star", height=7,verbose=False, empty=False, AH=False, gates=None, max_g=False):
 
         # initialize the grid basics
+        self.max_g = max_g
         self.AH = AH
         self.params = size_params + [height]  # parameters of the grid
         self.platform_params = size_params
@@ -203,7 +204,7 @@ class Grid:
     def get_random_net_order(self):
         key_list = list(self.net_gate.keys())
         shuffle(key_list)
-        return tuple(key_list)
+        return key_list[:]
 
     def get_net_ordered_manhattan(self):
         values = list(self.net_gate.values())
@@ -288,10 +289,6 @@ class Grid:
                 complete.append(" ".join(transformed_vals))
         return "\n".join(complete)
 
-    ###########################
-    ###### sorting block ######
-    ###########################
-
     def extract_route(self, path_dict, end_loc):
         path = ((),)
         get_loc = path_dict.get(end_loc)[0]
@@ -348,15 +345,65 @@ class Grid:
         return False, False, count
 
 
+    def A_star_max_g(self, net):
+        """ finds a path for a net with A-star algorithm, quits searching early if the end-gate is closed off by its immediate neighbourse.
 
-    def solve_order(self, net_order):
+        :param net: gate-pair (gX, gY)
+        :return: path, length if path founde, else false, false
+        """
+
+        q = Q.PriorityQueue()
+        count = 0
+        end_loc = self.gate_coords.get(self.net_gate.get(net)[1])
+        if self.griddict.get(end_loc).is_blocked_in():
+            return False, False, count
+        start_loc = self.gate_coords.get(self.net_gate.get(net)[0])
+        if self.griddict.get(start_loc).is_blocked_in():
+            return False, False, count
+
+        path = ((start_loc),)
+        manh_d = manhattan(path[-1], end_loc)
+        q.put((manh_d, 0, start_loc))
+        visited = dict()
+        visited[start_loc] = [start_loc, 0]
+        while not q.empty():
+            count += 1
+            k = q.get()
+            _, steps, current = k
+            for neighbour in self.griddict.get(current).get_neighbours():
+                n_coord = neighbour.get_coord()
+
+                if neighbour.is_occupied():
+                    if n_coord == end_loc:
+                        visited[n_coord] = [current, steps]
+                        return self.extract_route(visited, n_coord), \
+                               visited.get(end_loc)[1], count
+                    else:
+                        continue
+                if n_coord in visited:
+                    if visited.get(n_coord)[1] > steps:
+                        visited[n_coord] = [current, steps]
+                        q.put((manhattan(n_coord, end_loc) - steps + 1, steps - 1,
+                          n_coord))
+                else:
+                    visited[n_coord] = [current, steps]
+                    q.put((manhattan(n_coord, end_loc) + steps + 1, steps + 1,
+                           n_coord))
+        return False, False, count
+
+
+
+    def solve_order(self, net_order, reset=False):
         self.solving = True
         tot_length = 0
         solved = 0
         nets_solved = []
         tries = 0
         for net in net_order:
-            path, length, ntries = self.A_star(net)
+            if self.max_g:
+                path, length, ntries = self.A_star_max_g(net)
+            else:
+                path, length, ntries = self.A_star(net)
             tries += ntries
             if path:
                 self.place(net, path)
@@ -364,7 +411,9 @@ class Grid:
                 tot_length += length
                 nets_solved.append(net)
         self.solving = False
-        return solved, tot_length, tries
+        if reset:
+            self.reset_nets()
+        return [solved, tot_length, tries]
 
 
     def solve_order_ele(self, net_order):
@@ -546,10 +595,13 @@ class Grid:
                                n_coord))
         return False, False, count
 
-    def get_solution_placement(self, net_order):
+    def get_solution_placement(self, net_order, max_g=False):
         paths = []
         for net in net_order:
-            path, length = self.A_star(net)
+            if max_g:
+                path, length = self.A_star_max_g(net)[:2]
+            else:
+                path, length = self.A_star(net)[:2]
             if path:
                 paths.append(path)
                 Err = self.place(net, path)
@@ -567,7 +619,7 @@ class Grid:
         return False
 
 
-def file_to_grid(fpath, nets, height=7):
+def file_to_grid(fpath, nets, max_g=True, height=7):
     """
     :param nets: either a netlist or a number of nets
     :return: a new Grid
@@ -575,5 +627,5 @@ def file_to_grid(fpath, nets, height=7):
     base = read_grid(fpath)
     xlen = len(base[0])
     ylen = len(base)
-    Newgrid = Grid([xlen, ylen], gates=base, height=height)
+    Newgrid = Grid([xlen, ylen], gates=base, height=height, max_g=max_g)
     return Newgrid

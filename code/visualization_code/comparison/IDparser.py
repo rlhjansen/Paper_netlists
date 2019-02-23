@@ -50,7 +50,7 @@ class IDparser:
     def show_commondict(self):
         print(self.resdict.keys())
 
-    def get_commondict(self, tags):
+    def set_commondict(self, tags):
         result_sets = [self.tagsdict.get(tag) for tag in tags]
         print(tags, len(result_sets))
         try:

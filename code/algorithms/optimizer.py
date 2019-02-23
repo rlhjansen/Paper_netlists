@@ -1,11 +1,12 @@
 import os
+import matplotlib.pyplot as plt
 
 from ..classes.grid import file_to_grid
 from ..alghelper import combine_score
 
 
 class Optimizer:
-    def __init__(self, c, cX, n, nX, x, y, iters, tag, generated=True, **kwargs):
+    def __init__(self, c, cX, n, nX, x, y, iters, tag, generated=True, solutiondict=False, **kwargs):
         self.c = c      # circuit with c gates
         self.cX = cX    # Xth circuit with c gates
         self.n = n      # netlist with n nets
@@ -21,7 +22,10 @@ class Optimizer:
         self.all_results = []
         self.all_scores = []
         self.all_cl = []
+        self.all_data = []
         self.setup_load_paths()
+        if solutiondict:
+            self.solutiondict = solutiondict
 
     def make_circuit(self, *args):
         print("making circuit")
@@ -44,16 +48,20 @@ class Optimizer:
             #print(self.all_results)
 
     def add_iter_batch(self, batch_results):
-        scores = [[elem[0], elem[1]] for elem in batch_results]
-        orders = [elem[2] for elem in batch_results]
+        iter = str(self.iter)
+        self.all_data.extend([[iter] + br for br in batch_results])
 
-        self.all_results.extend(orders)
-        self.all_scores.extend([combine_score(score[0], score[1], scoring=self.best_ordering, total_nets=self.n) for score in scores])
-        self.all_cl.extend(scores)
-        self.all_results.append("----")
-        self.all_scores.append("----")
-        self.all_cl.append("----")
 
+    def add_iter_batch_solutiondict(self):
+        for key in sorted([k for k in self.solutiondict.keys()]):
+            valuelist = self.solutiondict.get(key)
+
+        self.used_results.extend(orders)
+        self.used_scores.extend([combine_score(score[0], score[1], scoring=self.best_ordering, total_nets=self.n) for score in scores])
+        self.used_cl.extend(scores)
+        self.used_results.append("----")
+        self.used_scores.append("----")
+        self.used_cl.append("----")
 
 
     def setup_load_paths(self):
@@ -89,7 +97,7 @@ class Optimizer:
         else:
             abspath = os.path.join(abspath, "baseline")
 
-
+        abspath = os.path.join(abspath, "ITER" + str(self.iters))
         if algtype == 'hc':
             abspath = self.saveloc_hc(abspath, **kwargs)
         if algtype == 'sa':
@@ -99,7 +107,9 @@ class Optimizer:
         if algtype == 'sela':
             abspath = self.saveloc_sela(abspath, **kwargs)
         if algtype == 'rc':
-            abspath = self.saveloc_rc(abspath, **kwargs)
+            abspath = self.saveloc_rc(abspath)
+        if algtype == 'simple':
+            abspath = self.saveloc_simple(abspath)
 
         abspath = os.path.join(abspath, 'C'+str(self.c))
         if not os.path.exists(abspath):
@@ -123,13 +133,17 @@ class Optimizer:
     @staticmethod
     def saveloc_hc(abspath, **kwargs):
         abspath = os.path.join(abspath, "HC")
-        assert "swaps" in kwargs
-        return os.path.join(abspath, "SW" + str(kwargs.get("swaps")))
+        assert "move" in kwargs
+        return os.path.join(abspath, "MOVE" + str(kwargs.get("move")))
 
 
     @staticmethod
     def saveloc_rc(abspath):
         return os.path.join(abspath, "RC")
+
+    @staticmethod
+    def saveloc_simple(abspath):
+        return os.path.join(abspath, "Simple")
 
     @staticmethod
     def saveloc_sa(abspath, **kwargs):
@@ -229,3 +243,27 @@ class Optimizer:
         savefile = os.path.join(self.savedir, 'all_results.txt')
         with open(savefile, 'w+') as sf:
             sf.write("\n".join([",".join([net for net in line]) for line in self.all_results]))
+
+    def save_all_data(self, plot=False):
+        if plot:
+            self.save_scatter_data()
+        self.save_data = [";".join([d[0], str(d[1]), str(d[2]), ",".join(d[3:])]) for d in self.all_data]
+        savefile = os.path.join(self.savedir, "all_data.csv")
+        with open(savefile, "w+") as sf:
+            for line in self.save_data:
+                sf.write(line + "\n")
+
+    def save_scatter_data(self):
+        data = sorted(self.all_data, key=lambda x : [-x[1], x[2]])
+        xs = [d[1] for d in data]
+        ys = [d[2] for d in data]
+        plt.scatter(xs, ys)
+        plt.xlim(min(xs), self.n)
+        plt.xlabel("nets placed")
+        plt.ylabel("total_length")
+        plt.title("goals = " + str(self.n) + " nets, sample of " + str(self.iters))
+        savefile = os.path.join(self.savedir, "scatter.png")
+        if not os.path.exists(os.path.dirname(savefile)):
+            os.makedirs(os.path.dirname(savefile))
+        plt.savefig(savefile)
+        plt.clf()

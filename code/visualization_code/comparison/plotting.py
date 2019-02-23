@@ -130,11 +130,14 @@ class resfile_reader:
                 raise ValueError("wrong function called, instead call 'get_rand_distribution(tags)'")
             else:
                 if "PPA" in tags or "SELA" in tags:
-                    file_score_dict[file] = extract_file_generational(file)
+                    file_score_dict[file] = self.extract_file_generational(file)
                 elif "HC" in tags or "SA" in tags:
-                    file_score_dict[file] = extract_file_iterative(file)
-        best_file = sorted(files, key=lambda file : -file_score_dict[file]["max_val"])
-        file_score_dict["best"] = file_score_dict[best_file]
+                    file_score_dict[file] = self.extract_file_iterative(file)
+        file_score_dict["best"] = file_score_dict[files[0]]
+        for file in files:
+            if file_score_dict[file]["max_val"][0] > file_score_dict["best"]["max_val"][0]:
+                file_score_dict["best"] = file_score_dict[file]
+        #file_score_dict["best"] = file_score_dict[best_file]
         return file_score_dict
 
 
@@ -163,7 +166,7 @@ class resfile_reader:
         data_index = 0
         generation_lines = []
         for i, line in enumerate(open(file, 'r').readlines()):
-            if l[0] == '-':
+            if line[0] == '-':
                 if not last_split:   #Temporary fix for (fixed) mistake in saving implementation, remove after initial results
                     data.append([])
                     data_index += 1
@@ -172,23 +175,64 @@ class resfile_reader:
             else:
                 last_split = False   #Temporary fix for (fixed) mistake in saving implementation, remove after initial results
                 data[data_index].append(float(line))
-        gen_info = {"min":[], "max":[], "mean":[]}
+        gen_info = {"min":[], "max":[], "mean":[], "i":[]}
         for i, gen in enumerate(data):
-            gen_info["min"].append(min(gen))
-            gen_info["max"].append(max(gen))
-            gen_info["mean"].append(sum(gen)/len(gen))
-            gen_info["i"].append(generation_lines[i])
+            try:
+                gen_info["min"].append(min(gen))
+                gen_info["max"].append(max(gen))
+                gen_info["mean"].append(sum(gen)/len(gen))
+                gen_info["i"].append(generation_lines[i])
+            except ValueError:
+                pass
         gen_info["max_val"] = max(gen_info["max"])
         df = pd.DataFrame(data=gen_info)
         return df
 
+    def make_fill_plot_best(self, tags, color):
+        sela_df = self.make_files_d(tags)
+        df = sela_df["best"]
+        sns.set_style("darkgrid")
+        sns.tsplot(df['max'], df['i'],color=color)
+        sns.tsplot(df['min'], df['i'],color=color)
+        plt.fill_between(df['i'], df['min'], df['max'], color=color, alpha='0.5')
+
+    def make_iter_plot(tags):
+        sela_df = self.make_files_d(tags)
+
 
 if __name__ == '__main__':
     rfr = resfile_reader()
-    selatags = ["SELA", "C100"]
-    sela_df = rfr.make_files_d(selatags)
-    df = sela_df["best"]
-    sns.tsplot((df['max']-df['mean']), df['i'],color=color)
-    sns.tsplot((df['min']-df['mean']), df['i'],color=color)
-    plt.fill_between(df['i'], (df['max']-df['mean']), (df['min']-df['mean']), color=color, alpha='0.5')
-    plt.show()
+    selacompare = False
+    ppasela = False
+    ppacompare = True
+    if selacompare:
+        alg = 'SELA'
+        BPs = ["BP0.05", "BP0.1", "BP0.15", "BP0.2"]
+        for bp in BPs:
+            a = 'A28'
+            selatags = ["SELA", "C100", bp , a]
+            rfr.make_fill_plot_best(selatags, 'yellow')
+            a = 'A7'
+            selatags = ["SELA", "C100", bp, a]
+            rfr.make_fill_plot_best(selatags, 'blue')
+            a = 'A14'
+            selatags = ["SELA", "C100", bp, a]
+            rfr.make_fill_plot_best(selatags, 'red')
+            plt.show()
+    elif ppasela:
+        selatags = ["SELA"]
+        rfr.make_fill_plot_best(selatags, 'yellow')
+        selatags = ["PPA"]
+        rfr.make_fill_plot_best(selatags, 'green')
+        plt.show()
+    elif ppacompare:
+            a = 'R7'
+            selatags = ["PPA", "C100", a]
+            rfr.make_fill_plot_best(selatags, 'yellow')
+            a = 'R5'
+            selatags = ["PPA", "C100", a]
+            rfr.make_fill_plot_best(selatags, 'blue')
+            a = 'R3'
+            selatags = ["PPA", "C100", a]
+            rfr.make_fill_plot_best(selatags, 'red')
+            plt.show()

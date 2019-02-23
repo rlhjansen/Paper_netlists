@@ -5,6 +5,7 @@ import code.algorithms.simulatedannealing as sa
 import code.algorithms.random_collector as rc
 import code.algorithms.ppa as ppa
 import code.algorithms.ppasela as sela
+import code.algorithms.simplyX as simple
 #
 # data generation
 import data_generation as dg
@@ -14,6 +15,7 @@ import multiprocessing as mp
 
 # command line handling
 import sys
+import datetime
 
 
 def ppa_cycle(c, cX, n, nX, x, y, tag, generated, iters, ord):
@@ -71,6 +73,7 @@ def rc_cycle(c, cX, n, nX, x, y, tag, generated, iters):
 
 def multi_run_pure_iterative(alg_object):
     alg_object.run_algorithm()
+
 
 def run_generated(tag, generated=True, spec=None):
     gates = [100]
@@ -162,5 +165,32 @@ def parse_args(args):
             print("invalid argument\neither gen or optimize")
 
 
+def simple_generator(c, cX, lens, puzzels, x, y, tag="TESTRUN"):
+    starttime = datetime.datetime.now()
+    for n in lens:
+        for nx in range(puzzels):
+            print("time elapsed:\t", datetime.datetime.now() - starttime)
+            net_num = nx
+            cX = 0
+            c = 100
+            s = simple.SIMPLY(c, cX, n, net_num, x, y, tag, iters=1)
+            yield s
+
+def meh(something):
+    pass
+
+def gatherSimple(x, y):
+    pool = mp.Pool(mp.cpu_count())
+    lens = [i+10 for i in range(61)]
+    Simples = simple_generator(100, 0, lens, 20, x, y, tag="TESTRUN")
+    amount = next(Simples)
+    for simple in Simples:
+        pool.apply_async(meh, args=(simple,))
+    pool.close()
+
+
+
 if __name__ == '__main__':
-    parse_args(sys.argv)
+    #parse_args(sys.argv)
+    for chipsize in [20, 30, 40, 50, 60, 70, 80]:
+        gatherSimple(chipsize, chipsize)
