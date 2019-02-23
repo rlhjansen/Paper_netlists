@@ -39,7 +39,6 @@ class IDparser:
         self.set_file_list()
         self.set_ftags()
         self.set_tagsdict()
-        self.resdict = {}
 
 
     def iter_change(self):
@@ -66,7 +65,6 @@ class IDparser:
                 except KeyError:
                     resdict[tag] = set()
                     resdict[tag].add(elem)
-        self.resdict = resdict
         return resdict
 
 

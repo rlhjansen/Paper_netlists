@@ -78,7 +78,7 @@ def multi_run_pure_iterative(alg_object):
 def run_generated(tag, generated=True, spec=None):
     gates = [100]
     circuits = 1
-    netlist = [60, 80, 100]
+    netlist = [80, 100, 60]
     netlists = 3
     x = 30
     y = 30
@@ -101,7 +101,7 @@ def run_generated(tag, generated=True, spec=None):
                             if "rc" in spec:
                                 rc_cycle(c, cX, n, nX, x, y, tag, generated, iters)
                         else:
-                            sa_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
+                            #sa_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
                             hc_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
                             sela_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)
                             ppa_cycle(c, cX, n, nX, x, y, tag, generated, iters, ordering)

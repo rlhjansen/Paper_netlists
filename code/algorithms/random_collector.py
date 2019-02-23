@@ -27,6 +27,7 @@ class RC(Optimizer):
         print(self.batches)
         self.tot_nets = n
 
+
     def run_algorithm(self):
         for _ in range(self.batches):
             pool = mp.Pool(processes=None)
