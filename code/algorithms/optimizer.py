@@ -21,6 +21,8 @@ class Optimizer:
         self.all_results = []
         self.all_scores = []
         self.all_cl = []
+        self.best_ordering = kwargs.get("ordering")
+        self.paralel = kwargs.get("paralel", "")
         self.setup_load_paths()
 
     def make_circuit(self, *args):
@@ -88,7 +90,9 @@ class Optimizer:
             abspath = os.path.join(abspath, "x"+str(self.x)+"y"+str(self.y))
         else:
             abspath = os.path.join(abspath, "baseline")
-
+        if self.paralel:
+            abspath = os.path.join(abspath, "paralel")
+            abspath = os.path.join(abspath, "par"+str(self.paralel))
 
         if algtype == 'hc':
             abspath = self.saveloc_hc(abspath, **kwargs)

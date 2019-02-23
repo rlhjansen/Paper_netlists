@@ -54,6 +54,8 @@ class PPA(Optimizer):
         zipped = zip(scores, orderlist)
         new_ranking = sorted(zipped, key=lambda x: -x[0])
         tot = [plant for plant in zip(*new_ranking)]
+        print("tot0", tot[0], end="\n\n")
+        print("tot1", tot[1])
         self.last_pop = self.pop
         self.last_scores = tot[0]
         self.add_iter_batch(data_clo)
@@ -83,7 +85,6 @@ class PPA(Optimizer):
             value = ceil(self.max_runners*mrank*random())
             runners.append(value)
 
-        print("orders", orders)
         for i, runner_count in enumerate(runners):
             cur_swaps = []
             for _ in range(runner_count):
@@ -166,7 +167,7 @@ class PPA(Optimizer):
     def run_algorithm(self):
         done = 0
         while self.iters - done > 0:
-            print("starting generation")
+            print("self.iters - done =", self.iters - done)
             pool = mp.Pool(processes=self.workercount)
             data_clo = pool.map(multi_run, [(self.circuits[ind], self.pop[ind]) for ind in range(len(self.pop))])
             pool.close()

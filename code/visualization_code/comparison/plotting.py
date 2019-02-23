@@ -1,11 +1,12 @@
 
 import random
 import sys
+import warnings
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-
+import numpy as np
 
 from IDparser import IDparser
 
@@ -40,18 +41,11 @@ class resfile_reader:
         elif parsed[0] == "quit":
             raise KeyboardInterupt
         else:
-            self.print_instructions()
             self.asklistings()
-
-    @staticmethod
-    def print_instructions():
-        print("select an option from [add,edit,del,quit]")
-        print("example input:")
-        print("add *type*,*tags*\nor\nedit *index* *type*,*tags*")
 
 
     def plot_all_best_with_tags(self, tags):
-        cmnd = self.idp.set_commondict(tags)
+        cmnd = self.idp.get_commondict(tags)
         if "PPA" in tags or "SELA" in tags:
             endtag = "all_scores.txt"
             files = [elem[1] for elem in cmnd[tags[0]] if elem[1][-len(endtag):] == endtag]
@@ -121,7 +115,7 @@ class resfile_reader:
 
 
     def make_files_d(self, tags):
-        cmnd = self.idp.set_commondict(tags)
+        cmnd = self.idp.get_commondict(tags)
         endtag = "scores.txt"
         files = [elem[1] for elem in cmnd[tags[0]] if elem[1][-len(endtag):] == endtag]
         file_score_dict = {}
@@ -130,10 +124,13 @@ class resfile_reader:
                 raise ValueError("wrong function called, instead call 'get_rand_distribution(tags)'")
             else:
                 if "PPA" in tags or "SELA" in tags:
-                    file_score_dict[file] = extract_file_generational(file)
+                    file_score_dict[file] = self.extract_file_generational(file)
                 elif "HC" in tags or "SA" in tags:
-                    file_score_dict[file] = extract_file_iterative(file)
-        best_file = sorted(files, key=lambda file : -file_score_dict[file]["max_val"])
+                    file_score_dict[file] = self.extract_file_iterative(file)
+        best_file = sorted(files, key=lambda file : -max(file_score_dict[file]["max_val"]))[0]
+
+        # interchange with continual bests of all - current = placeholder
+        warnings.warn("this 'best' is based on end score, not best up untill this iteration accross runs", UserWarning)
         file_score_dict["best"] = file_score_dict[best_file]
         return file_score_dict
 
@@ -144,13 +141,17 @@ class resfile_reader:
         maximum = []
         data = [float(line) for line in open(file, 'r').readlines()]
 
-        gen_info = {"min":[], "max":[], "mean":[]}
-        for gen in data:
-            gen_info["min"].append(min(gen))
-            gen_info["max"].append(max(gen))
-            gen_info["mean"].append(sum(gen)/len(gen))
+        gen_info = {"val":[], "max":[], "i":[]}
+        for i, val in enumerate(data):
+            try:
+                gen_info["max"].append(max([gen_info["max"][-1]] + [val]))
+            except IndexError:
+                gen_info["max"].append(val)
+            gen_info["val"].append(val)
+            gen_info["i"].append(i)
         gen_info["max_val"] = max(gen_info["max"])
-        return gen_info
+        df = pd.DataFrame(data=gen_info)
+        return df
 
 
     @staticmethod
@@ -163,7 +164,7 @@ class resfile_reader:
         data_index = 0
         generation_lines = []
         for i, line in enumerate(open(file, 'r').readlines()):
-            if l[0] == '-':
+            if line[0] == '-':
                 if not last_split:   #Temporary fix for (fixed) mistake in saving implementation, remove after initial results
                     data.append([])
                     data_index += 1
@@ -172,7 +173,8 @@ class resfile_reader:
             else:
                 last_split = False   #Temporary fix for (fixed) mistake in saving implementation, remove after initial results
                 data[data_index].append(float(line))
-        gen_info = {"min":[], "max":[], "mean":[]}
+        data.pop(-1)
+        gen_info = {"min":[], "max":[], "mean":[], "i":[]}
         for i, gen in enumerate(data):
             gen_info["min"].append(min(gen))
             gen_info["max"].append(max(gen))
@@ -185,10 +187,26 @@ class resfile_reader:
 
 if __name__ == '__main__':
     rfr = resfile_reader()
-    selatags = ["SELA", "C100"]
+    selatags = ["HC", "C100", "N60", "SW1"]
     sela_df = rfr.make_files_d(selatags)
     df = sela_df["best"]
-    sns.tsplot((df['max']-df['mean']), df['i'],color=color)
-    sns.tsplot((df['min']-df['mean']), df['i'],color=color)
-    plt.fill_between(df['i'], (df['max']-df['mean']), (df['min']-df['mean']), color=color, alpha='0.5')
+    keys = sela_df.keys()
+    mergedStuff = pd.concat([sela_df[k]['max'] for k in keys], axis=1)
+    print(mergedStuff.shape)
+    print(mergedStuff.head)
+    df["maxmax"] = mergedStuff.max(axis=1)
+    df["maxmean"] = mergedStuff.mean(axis=1)
+
+
+    color = 'blue'
+    sns.lineplot(y='maxmax', x='i',color=color, data=df)
+    df["max-"] = df["max"]-0.04
+    sns.lineplot(y='max', x='i',color=color, alpha=0.2, data=df)
+    sns.lineplot(y='max-', x='i',color=color, alpha=0.2, data=df)
+
+    sns.lineplot(y='maxmean', x='i',color='red', data=df)
+
+
+    # sns.tsplot((df['min']), df['i'],color=color)
+    plt.fill_between(df['i'], (df['max']), (df['max-']), color=color, alpha=0.5)
     plt.show()
