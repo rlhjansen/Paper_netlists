@@ -212,42 +212,6 @@ class resfile_reader:
 
 if __name__ == '__main__':
     rfr = resfile_reader()
-<<<<<<< HEAD
-    selacompare = False
-    ppasela = False
-    ppacompare = True
-    if selacompare:
-        alg = 'SELA'
-        BPs = ["BP0.05", "BP0.1", "BP0.15", "BP0.2"]
-        for bp in BPs:
-            a = 'A28'
-            selatags = ["SELA", "C100", bp , a]
-            rfr.make_fill_plot_best(selatags, 'yellow')
-            a = 'A7'
-            selatags = ["SELA", "C100", bp, a]
-            rfr.make_fill_plot_best(selatags, 'blue')
-            a = 'A14'
-            selatags = ["SELA", "C100", bp, a]
-            rfr.make_fill_plot_best(selatags, 'red')
-            plt.show()
-    elif ppasela:
-        selatags = ["SELA"]
-        rfr.make_fill_plot_best(selatags, 'yellow')
-        selatags = ["PPA"]
-        rfr.make_fill_plot_best(selatags, 'green')
-        plt.show()
-    elif ppacompare:
-            a = 'R7'
-            selatags = ["PPA", "C100", a]
-            rfr.make_fill_plot_best(selatags, 'yellow')
-            a = 'R5'
-            selatags = ["PPA", "C100", a]
-            rfr.make_fill_plot_best(selatags, 'blue')
-            a = 'R3'
-            selatags = ["PPA", "C100", a]
-            rfr.make_fill_plot_best(selatags, 'red')
-            plt.show()
-=======
     selatags = ["HC", "C100", "N60", "SW1"]
     sela_df = rfr.make_files_d(selatags)
     df = sela_df["best"]
@@ -271,4 +235,3 @@ if __name__ == '__main__':
     # sns.tsplot((df['min']), df['i'],color=color)
     plt.fill_between(df['i'], (df['max']), (df['max-']), color=color, alpha=0.5)
     plt.show()
->>>>>>> 4a8e8b0f745cc0d35015764a972ae31aa139afae

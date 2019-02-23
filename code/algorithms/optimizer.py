@@ -22,12 +22,7 @@ class Optimizer:
         self.all_results = []
         self.all_scores = []
         self.all_cl = []
-<<<<<<< HEAD
         self.all_data = []
-=======
-        self.best_ordering = kwargs.get("ordering")
-        self.paralel = kwargs.get("paralel", "")
->>>>>>> 4a8e8b0f745cc0d35015764a972ae31aa139afae
         self.setup_load_paths()
         if solutiondict:
             self.solutiondict = solutiondict
@@ -101,15 +96,8 @@ class Optimizer:
             abspath = os.path.join(abspath, "x"+str(self.x)+"y"+str(self.y))
         else:
             abspath = os.path.join(abspath, "baseline")
-<<<<<<< HEAD
 
         abspath = os.path.join(abspath, "ITER" + str(self.iters))
-=======
-        if self.paralel:
-            abspath = os.path.join(abspath, "paralel")
-            abspath = os.path.join(abspath, "par"+str(self.paralel))
-
->>>>>>> 4a8e8b0f745cc0d35015764a972ae31aa139afae
         if algtype == 'hc':
             abspath = self.saveloc_hc(abspath, **kwargs)
         if algtype == 'sa':
