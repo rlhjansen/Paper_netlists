@@ -44,9 +44,9 @@ def gen_from_established(c, cX, x, y, netlistlen, netcount):
         circuit.wipe_nets()
 
 
-def main(x, y):
+def main(x, y, netcount=10):
     tot_gates = [100]
-    netlistlen = [i+11 for i in range(60)]
+    netlistlen = [i+10 for i in range(61)]
     abspath = os.path.abspath(__file__)
     abspath = os.path.dirname(abspath)
     abspath = os.path.join(abspath, "data")
@@ -62,7 +62,7 @@ def main(x, y):
             circuit_path = create_circuit_datapath(gen, c, cX, x, y) + ".csv"
             newgrid.write_grid(circuit_path)
             for n in netlistlen:
-                for _ in range(10):
+                for _ in range(netcount):
                     netlistpath = create_net_datapath(gen, c, n, cX, x, y)
                     newgrid.generate_nets(n)
                     newgrid.write_nets(netlistpath)
@@ -71,11 +71,9 @@ def main(x, y):
 
 if __name__ == '__main__':
     netlens = [i+10 for i in range(61)]
-    for n in netlens:
-        gen_from_established(100, 0, 20, 20, n, 10)
-        gen_from_established(100, 0, 30, 30, n, 10)
-        gen_from_established(100, 0, 40, 40, n, 10)
-        gen_from_established(100, 0, 50, 50, n, 10)
-        gen_from_established(100, 0, 60, 60, n, 10)
-        gen_from_established(100, 0, 70, 70, n, 10)
-        gen_from_established(100, 0, 80, 80, n, 10)
+    main(90, 90, netcount=20)
+    main(100, 100, netcount=20)
+    # for n in netlens:
+    #
+    #     gen_from_established(100, 0, 90, 90, n, 10)
+    #     gen_from_established(100, 0, 100, 100, n, 10)

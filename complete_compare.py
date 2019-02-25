@@ -13,12 +13,12 @@ figure(num=None, figsize=(15, 30), dpi=160, facecolor='w', edgecolor='k')
 
 
 
-def get_files(xsize, ysize):
+def get_files(xsize, ysize, iters):
     path = os.path.curdir
     path = os.path.join(path, "results")
     path = os.path.join(path, "generated")
     path = os.path.join(path, "x" + str(xsize) + "y" + str(ysize))
-    path = os.path.join(path, "ITER1")
+    path = os.path.join(path, "ITER" + str(iters))
     path = os.path.join(path, "Simple")
     path = os.path.join(path, "C100")
     path = os.path.join(path, "C100_0")
@@ -527,9 +527,9 @@ def add_solvability_labels():
     plt.legend()
 
 
-def gather_data_chipsize(chipsize, netlenths):
-    netlengths = [i+11 for i in range(60)]
-    files = get_files(chipsize, chipsize)
+def gather_data_chipsize(chipsize, netlenths, iters):
+    netlengths = [i+10 for i in range(61)]
+    files = get_files(chipsize, chipsize, iters)
     netlendict = reorder_by_netlength(files, netlengths)
     netlen_countdict = make_netlen_scatterpoints_placepercent(files, netlengths, netlendict, chipsize)
     netlen_solvability_dict = make_netlen_solvabilitydict(files, netlengths, netlendict)
@@ -548,16 +548,16 @@ def save_solvability_all():
     plt.clf()
 
 
-def make_solvability_comparison(sizes):
+def make_solvability_comparison(sizes, iters):
     figure(num=None, figsize=(5, 5), dpi=160, facecolor='w', edgecolor='k')
 
     netlendicts_persize = []
     netlen_countdicts_persize = []
     netlen_solvabilitydicts_persize = []
-    netlengths = [i+11 for i in range(60)]
+    netlengths = [i+10 for i in range(61)]
 
     for chipsize in sizes:
-        files, netlendict, netlen_countdict, netlen_solvabilitydict = gather_data_chipsize(chipsize, netlengths)
+        files, netlendict, netlen_countdict, netlen_solvabilitydict = gather_data_chipsize(chipsize, netlengths, iters)
         netlendicts_persize.append(netlendict)
         netlen_countdicts_persize.append(netlen_countdict)
         netlen_solvabilitydicts_persize.append(netlen_solvabilitydict)
@@ -567,5 +567,36 @@ def make_solvability_comparison(sizes):
     for i, chipsize in enumerate(sizes):
         make_solvability_plots(netlengths, netlen_solvabilitydicts_persize[i], chipsize)
 
+
+def solvability_header_gen(chipsizes, best_of_N):
+    for cs in chipsizes:
+        random_solvability = ["solvability by random {}x{}".format(str(cs), str(cs))]
+        best_solvability = ["solvability best of " +str(best_of_N) + " {}x{}".format(str(cs), str(cs))]
+        yield random_solvability
+        yield best_solvability
+
+
+def make_solvability_csvs(chipsizes, best_of_N):
+    netlendicts_persize = []
+    netlen_countdicts_persize = []
+    netlen_solvabilitydicts_persize = []
+    netlengths = [i+10 for i in range(61)]
+    csv_data_walk = [["netlist length"]] + [elem for elem in solvability_header_gen(chipsizes, best_of_N)]
+    dw_len = len(csv_data_walk)
+    csv_data_walk[0].extend([str(nl) for nl in netlengths])
+    for i, chipsize in enumerate(chipsizes):
+        j = i*2
+        files, netlendict, netlen_countdict, netlen_solvabilitydict = gather_data_chipsize(chipsize, netlengths, best_of_N)
+        print(netlen_solvabilitydict)
+        csv_data_walk[j+1].extend([str(mean(netlen_solvabilitydict[n]['f'])) for n in netlengths])
+        csv_data_walk[j+2].extend([str(mean(netlen_solvabilitydict[n]['bc'])) for n in netlengths])
+    with open("compare_solvability_best_of_"+str(best_of_N)+".csv", "w+") as inf:
+        for i, netlength in enumerate(csv_data_walk[0]):
+            line = ",".join([csv_data_walk[j][i] for j in range(dw_len)]) + "\n"
+            inf.write(line)
+
+
+
 chipsizes = [20, 30, 40, 50, 60, 70, 80]
-make_solvability_comparison(chipsizes)
+#make_solvability_comparison(chipsizes)
+make_solvability_csvs(chipsizes, 1)
