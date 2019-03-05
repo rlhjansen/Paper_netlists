@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 
 class SIMPLY(Optimizer):
-    def __init__(self, c, cX, n, nX, x, y, tag, iters=200, chance_on_same=.5, direct_run=True, **kwargs):
+    def __init__(self, c, cX, n, nX, x, y, tag, iters=200, chance_on_same=.5, **kwargs):
         """Initializes instance to collect sample solutions
 
         :param grid_num: Assigned number of circuit
@@ -24,23 +24,18 @@ class SIMPLY(Optimizer):
         self.set_saveloc('simple')
         self.circuit = file_to_grid(self.circuit_path, None, max_g=True)
         self.circuit.read_nets(self.netlist_path)
-        self.direct_run = direct_run
-        if direct_run:
-            self.run_algorithm()
-        else:
-            self.circuit.disconnect()
+        self.circuit.disconnect()
 
 
     def run_algorithm(self, interval=100, _plot=False):
-        if not self.direct_run:
-            self.circuit.connect()
+        self.circuit.connect()
         self.iter = 0
         ords = [self.circuit.get_random_net_order() for i in range(self.iters)]
         data = [self.circuit.solve_order(ords[i], reset=True)[:2] for i in range(self.iters)]
         combined_data = [data[i] + ords[i] for i in range(len(data))]
 
         self.add_iter_batch(combined_data)
-        self.save_all_data(plot=False)
+        self.save_all_data(plot=_plot)
         data = sorted(self.all_data, key=lambda x : [-x[1], x[2]])
         xs = [d[1] for d in data]
         ys = [d[2] for d in data]
