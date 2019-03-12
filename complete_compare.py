@@ -1,6 +1,7 @@
 from refscatter import reorder_by_netlength
 from statistics import mean
 from collections import OrderedDict, Counter
+
 from testingmodule import lprint
 
 
@@ -477,12 +478,14 @@ def make_percent_placement_plots(netlengths, netlen_countdict, squaresize, direc
     plt.savefig(new_fname)
     plt.clf()
 
-def make_netlen_solvabilitydict(files, netlengths, netlendict):
+def make_netlen_solvabilitydict(files, netlengths, netlendict, chipsize, iters):
     netlen_solvabilitydict = {k:{'f':[], 'bc':[], 'mc':[], 'minc':[]} for k in netlengths}
     for k in netlendict:
-        strk = str(k)
+        strk = str(k) + os.sep
+
         for i, f in enumerate(netlendict[k]["filenames"]):
-            if strk in f[36:]:
+            fcheck = f[48+2*len(str(chipsize))+len(str(iters)):48+2*len(str(chipsize))+len(strk)+len(str(iters))]
+            if strk in fcheck:
                 firstcount = get_first_placed_count(f)
                 best_count = get_max_placed_count(f)
                 mean_count = get_mean_placed_count(f, k)
@@ -528,12 +531,14 @@ def add_solvability_labels():
     plt.legend()
 
 
-def gather_data_chipsize(chipsize, netlenths, iters):
-    netlengths = [i+10 for i in range(61)]
+def gather_data_chipsize(chipsize, netlengths, iters):
     files = get_files(chipsize, chipsize, iters)
-    netlendict = reorder_by_netlength(files, netlengths)
+    # lprint(files)
+    netlendict = reorder_by_netlength(files, netlengths, iters, chipsize)
+    # lprint([netlendict[k]["filenames"] for k in netlendict])
+    # input()
     netlen_countdict = make_netlen_scatterpoints_placepercent(files, netlengths, netlendict, chipsize)
-    netlen_solvability_dict = make_netlen_solvabilitydict(files, netlengths, netlendict)
+    netlen_solvability_dict = make_netlen_solvabilitydict(files, netlengths, netlendict, chipsize, iters)
     return files, netlendict, netlen_countdict, netlen_solvability_dict
 
 
@@ -555,7 +560,7 @@ def make_solvability_comparison(sizes, iters):
     netlendicts_persize = []
     netlen_countdicts_persize = []
     netlen_solvabilitydicts_persize = []
-    netlengths = [i+10 for i in range(61)]
+    netlengths = [i+10 for i in range(81)]
 
     for chipsize in sizes:
         files, netlendict, netlen_countdict, netlen_solvabilitydict = gather_data_chipsize(chipsize, netlengths, iters)
@@ -583,16 +588,21 @@ def make_solvability_csvs(chipsizes, best_of_N):
     netlendicts_persize = []
     netlen_countdicts_persize = []
     netlen_solvabilitydicts_persize = []
-    netlengths = [i+10 for i in range(61)]
+    netlengths = [i+10 for i in range(81)]
     csv_data_walk = [["netlist length"]] + [elem for elem in solvability_header_gen(chipsizes, best_of_N)]
     dw_len = len(csv_data_walk)
     csv_data_walk[0].extend([str(nl) for nl in netlengths])
-    print(csv_data_walk)
     for i, chipsize in enumerate(chipsizes):
-        print(chipsize)
+        print("getting solvability for chipsize", chipsize)
         j = i*3
         files, netlendict, netlen_countdict, netlen_solvabilitydict = gather_data_chipsize(chipsize, netlengths, best_of_N)
-        print(netlen_solvabilitydict)
+        print("arbitrary")
+        lprint([str(mean(netlen_solvabilitydict[n]['f'])) for n in netlengths][:5])
+        print("mean")
+        lprint([str(mean(netlen_solvabilitydict[n]['mc'])) for n in netlengths][:5])
+        print("bests")
+        lprint([str(mean(netlen_solvabilitydict[n]['bc'])) for n in netlengths][:5])
+        input()
         csv_data_walk[j+1].extend([str(mean(netlen_solvabilitydict[n]['f'])) for n in netlengths])
         csv_data_walk[j+2].extend([str(mean(netlen_solvabilitydict[n]['mc'])) for n in netlengths])
         csv_data_walk[j+3].extend([str(mean(netlen_solvabilitydict[n]['bc'])) for n in netlengths])
@@ -604,6 +614,6 @@ def make_solvability_csvs(chipsizes, best_of_N):
 
 
 chipsizes = [20, 30, 40, 50, 60, 70, 80, 90, 100]
-#make_solvability_comparison(chipsizes)
+make_solvability_comparison(chipsizes, 200)
 # make_solvability_csvs(chipsizes, 1)
 make_solvability_csvs(chipsizes, 200)

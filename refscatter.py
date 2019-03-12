@@ -1,41 +1,40 @@
 
 import matplotlib.pyplot as plt
 import os
+from testingmodule import lprint
 
 path = os.path.curdir
 path = os.path.join(path, "results")
 path = os.path.join(path, "generated")
 path = os.path.join(path, "x30y30")
-path = os.path.join(path, "ITER1")
+path = os.path.join(path, "ITER200")
 
 destinationpath = os.path.join(os.path.curdir, "Refscatter200")
 
 
 def get_files():
-    return [os.path.join(fdata[0], fdata[2][1]) for fdata in os.walk(path) if 'all_data.csv2' in fdata[2]]
+    return [os.path.join(fdata[0], fdata[2][1]) for fdata in os.walk(path) if 'all_data.csv' in fdata[2]]
 
-
-
-def reorder_by_netlength(files, lengths):
+def reorder_by_netlength(files, lengths, iters, chipsize):
     """ Groups files by length and gathers individual filenames
     """
-
     netlendict = {k:{"filenames":[], "Ns":[], "Cs":[]} for k in lengths}
+    f_c_start = 54
+    f_start = f_c_start-6 + len(str(iters))+2*len(str(chipsize))
     for f in files:
-        for k in netlendict:
-            strk = str(k) + '\\'
-            # print(k, strk, f[53:53+len(str(k))+1], f)
-            # input("yes?")
-            if strk  in f[53:53+len(str(k))+1]:
-                for i in range(10):
-                    if "N" + str(k) + "_" + str(i) in f:
-                        netlendict[k]["Ns"].append("N" + str(k) + "_" + str(i))
-                        break
-                for i in range(10):
-                    if "C100" + "_" + str(i) in f:
-                        netlendict[k]["Cs"].append("C100" + "_" + str(i))
-                        break
-                netlendict[k]["filenames"].append(f)
+        k = int(f[f_start:f[f_start:].index(os.sep) + f_start])
+        strk = str(k) + os.sep
+        nl_num_S = f_start+len(strk)*2+1
+        i = f[nl_num_S:f[nl_num_S:].index(os.sep)+nl_num_S]
+        #
+        # print(f)
+        # print(f[f_start:f[f_start:].index(os.sep) + f_start])
+        # print(i)
+        # print(f[f_c_start:f_c_start+1])
+        fcheck = f[48+2*len(str(chipsize))+len(str(iters)):48+2*len(str(chipsize))+len(strk)+len(str(iters))]
+        netlendict[k]["Ns"].append("N" + str(k) + "_" + str(i))
+        netlendict[k]["Cs"].append("C100" + "_" + f[f_c_start:f_c_start+1])
+        netlendict[k]["filenames"].append(f)
     return netlendict
 
 
@@ -55,7 +54,7 @@ def get_scatterpoints(f):
 def get_netlen_scatterpoints(files, netlendict):
     """ Groups by netlist length and collects scatterpoints per length category
     """
-    netlen_pointdict = {k:{'xs':[], 'ys':[]} for k in [20,30,40,50,60,70]}
+    netlen_pointdict = {k:{'xs':[], 'ys':[]} for k in [20,30,40,50,60,70,80,90]}
     for k in netlendict:
         strk = str(k)
         for i, f in enumerate(netlendict[k]["filenames"]):
@@ -81,8 +80,8 @@ def make_distr_ref_plots(basepoint_dict, netlendict):
             plt.xlabel("nets placed")
             plt.ylabel("total_length")
             new_fname = os.path.join(destinationpath, netlendict[k]["Ns"][i] + netlendict[k]["Cs"][i] + ".png")
-            print(fname)
-            print(new_fname)
+            # print(fname)
+            # print(new_fname)
             if not os.path.exists(os.path.dirname(new_fname)):
                 os.makedirs(os.path.dirname(new_fname))
             plt.savefig(new_fname)

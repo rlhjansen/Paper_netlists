@@ -127,7 +127,6 @@ class Optimizer:
         if not os.path.exists(abspath):
             os.makedirs(abspath)
         self.savedir = abspath
-        print("savedir =", self.savedir)
 
 
     @staticmethod
