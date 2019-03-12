@@ -63,14 +63,14 @@ def get_max_placed_count(f):
     readfile.close()
     return best_count
 
-def get_mean_placed_count(f):
+def get_mean_placed_count(f, k):
     """ Gets the scatterpoints from a file
     """
     readfile = open(f, 'r')
     place_counts = []
     for line in readfile.readlines():
         data = line.split(";")
-        place_counts.append(int(data[1]))
+        place_counts.append(1 if int(data[1]) == k else 0)
     readfile.close()
     return mean(place_counts)
 
@@ -85,7 +85,7 @@ def make_netlen_scatterpoints_placepercent(files, netlengths, netlendict, square
             if strk in f[36:]:
                 firstcount = get_first_placed_count(f)
                 best_count = get_max_placed_count(f)
-                mean_count = get_mean_placed_count(f)
+                mean_count = get_mean_placed_count(f, k)
                 min_count = get_min_placed_count(f)
                 netlen_countdict[k]['f'].append(firstcount/k)
                 netlen_countdict[k]['bc'].append(best_count/k)
@@ -485,9 +485,10 @@ def make_netlen_solvabilitydict(files, netlengths, netlendict):
             if strk in f[36:]:
                 firstcount = get_first_placed_count(f)
                 best_count = get_max_placed_count(f)
-                mean_count = get_mean_placed_count(f)
+                mean_count = get_mean_placed_count(f, k)
                 min_count = get_min_placed_count(f)
                 netlen_solvabilitydict[k]['f'].append(1 if firstcount == k else 0)
+                netlen_solvabilitydict[k]['mc'].append(mean_count)
                 netlen_solvabilitydict[k]['bc'].append(1 if best_count == k else 0)
     return netlen_solvabilitydict
 
@@ -571,8 +572,10 @@ def make_solvability_comparison(sizes, iters):
 def solvability_header_gen(chipsizes, best_of_N):
     for cs in chipsizes:
         random_solvability = ["solvability by random {}x{}".format(str(cs), str(cs))]
+        mean_solvability = ["solvability of mean {}x{}".format(str(cs), str(cs))]
         best_solvability = ["solvability best of " +str(best_of_N) + " {}x{}".format(str(cs), str(cs))]
         yield random_solvability
+        yield mean_solvability
         yield best_solvability
 
 
@@ -584,12 +587,15 @@ def make_solvability_csvs(chipsizes, best_of_N):
     csv_data_walk = [["netlist length"]] + [elem for elem in solvability_header_gen(chipsizes, best_of_N)]
     dw_len = len(csv_data_walk)
     csv_data_walk[0].extend([str(nl) for nl in netlengths])
+    print(csv_data_walk)
     for i, chipsize in enumerate(chipsizes):
-        j = i*2
+        print(chipsize)
+        j = i*3
         files, netlendict, netlen_countdict, netlen_solvabilitydict = gather_data_chipsize(chipsize, netlengths, best_of_N)
         print(netlen_solvabilitydict)
         csv_data_walk[j+1].extend([str(mean(netlen_solvabilitydict[n]['f'])) for n in netlengths])
-        csv_data_walk[j+2].extend([str(mean(netlen_solvabilitydict[n]['bc'])) for n in netlengths])
+        csv_data_walk[j+2].extend([str(mean(netlen_solvabilitydict[n]['mc'])) for n in netlengths])
+        csv_data_walk[j+3].extend([str(mean(netlen_solvabilitydict[n]['bc'])) for n in netlengths])
     with open("compare_solvability_best_of_"+str(best_of_N)+".csv", "w+") as inf:
         for i, netlength in enumerate(csv_data_walk[0]):
             line = ",".join([csv_data_walk[j][i] for j in range(dw_len)]) + "\n"
@@ -597,6 +603,7 @@ def make_solvability_csvs(chipsizes, best_of_N):
 
 
 
-chipsizes = [20, 30, 40, 50, 60, 70, 80]
+chipsizes = [20, 30, 40, 50, 60, 70, 80, 90, 100]
 #make_solvability_comparison(chipsizes)
-make_solvability_csvs(chipsizes, 1)
+# make_solvability_csvs(chipsizes, 1)
+make_solvability_csvs(chipsizes, 200)
