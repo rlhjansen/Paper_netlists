@@ -1,4 +1,0 @@
-in visualization code:
-grid_fromfile.py afschrijven
-
-code om (gelegd) grid in 2d te visualizeren.

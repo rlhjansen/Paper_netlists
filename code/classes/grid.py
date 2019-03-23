@@ -296,6 +296,7 @@ class Grid:
 
             path = path + (get_loc,)
             get_loc = path_dict.get(get_loc)[0]
+        print(path[::-1])
         return path[::-1]
 
     def A_star(self, net):
@@ -366,6 +367,7 @@ class Grid:
         q.put((manh_d, 0, start_loc))
         visited = dict()
         visited[start_loc] = [start_loc, 0]
+        print("start_loc", start_loc)
         while not q.empty():
             count += 1
             k = q.get()
@@ -376,6 +378,7 @@ class Grid:
                 if neighbour.is_occupied():
                     if n_coord == end_loc:
                         visited[n_coord] = [current, steps]
+                        print("end_loc", end_loc)
                         return self.extract_route(visited, n_coord), \
                                visited.get(end_loc)[1], count
                     else:
@@ -414,6 +417,32 @@ class Grid:
         if reset:
             self.reset_nets()
         return [solved, tot_length, tries]
+
+
+    def solve_order_paths(self, net_order, reset=False):
+        self.solving = True
+        tot_length = 0
+        solved = 0
+        nets_solved = []
+        tries = 0
+        paths = []
+        for net in net_order:
+            if self.max_g:
+                print("entering max g")
+                path, length, ntries = self.A_star_max_g(net)
+            else:
+                path, length, ntries = self.A_star(net)
+            tries += ntries
+            if path:
+                self.place(net, path)
+                solved += 1
+                tot_length += length
+                nets_solved.append(net)
+            paths.append(path)
+        self.solving = False
+        if reset:
+            self.reset_nets()
+        return [solved, tot_length, tries, paths]
 
 
     def solve_order_ele(self, net_order):

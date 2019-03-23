@@ -7,20 +7,19 @@ import numpy as np
 
 from mpl_toolkits.mplot3d import Axes3D #<-- Note the capitalization!
 
-from Gridfile import file_to_grid
-from independent_functions import create_fpath, lprint, get_name_netfile, get_name_circuitfile
+from code.classes.grid import file_to_grid
+from code.classes.independent_functions import create_fpath, lprint, get_name_netfile, get_name_circuitfile
+import code.algorithms.simplyX as simple
 
-CIRCUIT_SUBDIR = "circuit_map_100"
 GIF_SUBDIR = "Gifs"
-GRIDNUM = 0
-NL_NUM = 1
-X = 30
-Y = 30
-G = 100
-NETL_LEN = 100
-MESH_HEIGHT = 5
-NET_MAX = 20
-LONG_ORD = ['n75', 'n73', 'n53', 'n31', 'n83', 'n41', 'n30', 'n67', 'n60', 'n77', 'n57', 'n70', 'n16', 'n26', 'n76', 'n56', 'n64', 'n63', 'n90', 'n65', 'n45', 'n10', 'n86', 'n87', 'n20', 'n55', 'n69', 'n18', 'n2', 'n71', 'n61', 'n43', 'n47', 'n23', 'n93', 'n68', 'n34', 'n13', 'n52', 'n84', 'n94', 'n8', 'n78', 'n66', 'n79', 'n39', 'n54', 'n9', 'n85', 'n44', 'n4', 'n37', 'n3', 'n92', 'n82', 'n0', 'n59', 'n74', 'n81', 'n72', 'n11', 'n42', 'n80', 'n99', 'n17', 'n21', 'n7', 'n98', 'n1', 'n96', 'n49', 'n95', 'n91', 'n35', 'n62', 'n25', 'n88', 'n14', 'n28', 'n51', 'n24', 'n50', 'n89']
+c = 100
+cX = 0
+n = 45
+nX = 10
+x = 90
+y = 90
+MESH_HEIGHT = 7
+LONG_ORD = "n16,n38,n14,n2,n37,n43,n3,n0,n6,n4,n34,n41,n26,n13,n31,n17,n33,n28,n11,n9,n22,n15,n32,n8,n29,n7,n10,n21,n25,n12,n23,n5,n24,n30,n1,n42,n36,n19,n39,n35,n20,n27,n44,n18,n40".split(",")
 BASE_LAYER_TITLE = ""
 RESIZE = 1
 
@@ -75,6 +74,7 @@ def remove_empty_paths(paths, order):
     """
     clean_paths = []
     clean_order = []
+    print(paths)
     for i, path in enumerate(paths):
         if len(path)-1:
             clean_paths.append(path)
@@ -82,7 +82,7 @@ def remove_empty_paths(paths, order):
     return clean_paths, clean_order
 
 
-def plot_circuit(paths, order, gates, mesh_height, x, y, select, save_name, alt_title=None, resize=1):
+def plot_circuit(paths, order, gates, mesh_height, x, y, select, save_name, title=None, resize=1):
     """ Plots the complete circuit in 3D, filled by way of the paths.
 
     :param paths: List of tuples of tuples
@@ -94,7 +94,7 @@ def plot_circuit(paths, order, gates, mesh_height, x, y, select, save_name, alt_
     :param select: Bool, True to manually select direction from which to view
         the plotted circuit, False for autoview-save.
     :param save_name: filename for autoview-save
-    :param alt_title: creates title "X nets placed" in cae no alternative is given
+    :param title: creates title
     :param resize: resizes the plot when saving (make lower when experimenting
         to save time, e.g. 0.3)
     """
@@ -107,12 +107,10 @@ def plot_circuit(paths, order, gates, mesh_height, x, y, select, save_name, alt_
 
     #title & nets
     c_paths, c_order = remove_empty_paths(paths, order)
+    print(c_paths, c_order)
     xpp, ypp, zpp = paths_to_plotlines(c_paths)
     plotcount = len(xpp)
-    if not alt_title:
-        ax.set_title(create_plot_title(plotcount))
-    else:
-        ax.set_title(alt_title)
+    ax.set_title(title)
 
     # nets
     markers = get_markers(len(xpp))
@@ -206,37 +204,35 @@ def paths_to_buildcomp(paths):
     return tot_path
 
 
-def get_circuit_basics(grid_num, net_num, x, y, g, order, ordlength=-1):
+def get_circuit_basics(circuit, order):
     """ Returns necessities for plotting a laid circuit with certain order
 
-    :param grid_num: grid number
-    :param net_num: netlist number
-    :param x: x dimension of circuit
-    :param y: y dimension of circuit
-    :param g: gates of circuit
+    :param circuit: circuit instance
     :param order: netlist order, if None then random.
     :return: gate coordinates, paths, partitioned paths
     """
-    net_file = get_name_netfile(grid_num, net_num)
-    grid_file = get_name_circuitfile(grid_num, x, y, g)
-    grid_file = create_fpath(CIRCUIT_SUBDIR, grid_file)
-
-    G = file_to_grid(grid_file, None)
-    G.read_nets(CIRCUIT_SUBDIR, net_file)
+    print(order)
     if order:
-        paths = G.get_solution_placement(order[:ordlength])
+        print("max g", circuit.max_g)
+        paths = circuit.solve_order_paths(order)[-1]
+        for i, net in enumerate(order):
+            gates = circuit.net_gate.get(net)
+            start_gate = circuit.gate_coords.get(gates[0])
+            end_gate = circuit.gate_coords.get(gates[1])
+            paths[i] = (start_gate,) + paths[i][:-1] + (end_gate,)
+
         build_paths = paths_to_buildcomp(paths)
     else:
-        paths = G.get_solution_placement(G.get_random_net_order())
+        paths = circuit.get_solution_placement(G.get_random_net_order())
         build_paths = paths_to_buildcomp(paths)
-    _, g_coords = G.get_gate_coords()
+    _, g_coords = circuit.get_gate_coords()
     return g_coords, paths, build_paths
 
 
 ###############################################################################
 # Model types
 ###############################################################################
-""" Selecting netlist, net order, circuit layout (gates) & other parameters 
+""" Selecting netlist, net order, circuit layout (gates) & other parameters
 
 are all done at the top of the file as of now, functions here only take account of what is needed for the drawing.
 
@@ -244,27 +240,35 @@ I REPEAT: GLOBAL VARIABLES GALORE!
 """
 
 
-def create_model(titlestring="", height=None, order=None, ordlength=None, select=False, save_name="net model"):
-    g_coords, paths, _ = get_circuit_basics(GRIDNUM, NL_NUM, X, Y, G, order, ordlength=ordlength)
-    c_save_name = save_name + str(ordlength) + ".png"
-    plot_circuit(paths, order, g_coords, height, X, Y, select, c_save_name, alt_title=titlestring, resize=RESIZE)
+def create_model(titlestring="", height=7, select=False, save_name="net model"):
+    s = simple.SIMPLY(c, cX, n, nX, x, y, 'NEIN', iters=1, no_save=True)
+    s.circuit.connect()
+    circuit = s.circuit
+
+    g_coords, paths, _ = get_circuit_basics(circuit, LONG_ORD)
+    c_save_name = save_name + ",".join([str(x),str(n),str(nX)]) + ".png"
+    plot_circuit(paths, LONG_ORD, g_coords, height, x, y, select, c_save_name, title=titlestring, resize=RESIZE)
 
 
 def create_base_model(titlestring, select=False, save_name="bottom layer model.png"):
-    g_coords, _, _= get_circuit_basics(GRIDNUM, NL_NUM, X, Y, G, [])
-    plot_circuit([], [], g_coords, False, select, X, Y, save_name, alt_title=titlestring)
+    s = simple.SIMPLY(c, cX, n, nX, x, y, 'NEIN', iters=1, no_save=True)
+    s.circuit.connect()
+    circuit = s.circuit
+
+    g_coords, paths, _ = get_circuit_basics(circuit, LONG_ORD)
+    plot_circuit([], [], g_coords, False, select, X, Y, save_name, title=titlestring)
 
 
-def create_model_gif(subdir, select=False, height=None, order=None, ordlength=None, save_name="gif_model_parts", resize=1, redraw=False, del_after=False):
+def create_model_gif(subdir, select=False, height=7, save_name="gif_model_parts", resize=1, redraw=False, del_after=False):
 
-    g_coords, _, build_paths = get_circuit_basics(GRIDNUM, NL_NUM, X, Y, G, order, ordlength=ordlength)
+    g_coords, _, build_paths = get_circuit_basics(GRIDNUM, NL_NUM, X, Y, G, LONG_ORD)
 
     if redraw:
         for i in range(len(build_paths)):
 
             c_save_name = save_name + str(i).zfill(5) + ".png"
             c_save_name = create_fpath(subdir, c_save_name)
-            plot_circuit(build_paths[i], order, g_coords, height, X, Y, select, c_save_name, alt_title=" ", resize=resize)
+            plot_circuit(build_paths[i], order, g_coords, height, X, Y, select, c_save_name, title=" ", resize=resize)
 
     with imageio.get_writer(os.path.join(subdir,'model_gif.gif'), mode='I', subrectangles=True) as writer:
         for filename in os.listdir(subdir):
@@ -278,7 +282,11 @@ def create_model_gif(subdir, select=False, height=None, order=None, ordlength=No
 
 
 
-""" Selecting netlist, net order, circuit layout (gates) & other parameters 
+
+create_model("", select=True, save_name="bottom layer model.png")
+
+
+""" Selecting netlist, net order, circuit layout (gates) & other parameters
 
 are all done at the top of the file as of now, functions here only take account of what is needed for the drawing.
 
@@ -286,6 +294,4 @@ I REPEAT: WHEN CALLING THESE FUNCTIONS, GLOBAL VARIABLES GALORE!
 """
 
 
-#create_base_model(" ")
-#create_model(" ",height=5, order=LONG_ORD, ordlength=NET_MAX)
 #create_model_gif("Gifs", ordlength=83, redraw=True, height=MESH_HEIGHT, order=LONG_ORD, resize=RESIZE, del_after=True)

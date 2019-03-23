@@ -24,6 +24,7 @@ class Optimizer:
         self.all_cl = []
         self.all_data = []
         self.setup_load_paths()
+        self.no_save = kwargs.get("no_save", False)
         if solutiondict:
             self.solutiondict = solutiondict
 
@@ -86,6 +87,8 @@ class Optimizer:
 
 
     def set_saveloc(self, algtype, **kwargs):
+        if self.no_save:
+            return
         abspath = os.path.abspath(__file__)
         abspath = os.path.dirname(abspath)
         abspath = os.path.dirname(abspath)

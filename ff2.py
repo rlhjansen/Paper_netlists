@@ -22,10 +22,8 @@ def expfunc(nl, const1, const2):
     return np.exp(-np.exp(2*(nl+const1)*const2))
 
 
-
 def lstr(iterable):
     return [str(elem) for elem in iterable]
-
 
 
 def calc_alpha_beta(iters, chipsizes):
@@ -74,6 +72,7 @@ def calc_alpha_beta(iters, chipsizes):
         #     os.makedirs(os.path.pardir(savename))
         # plt.savefig(savename)
         # plt.clf()
+
     plt.legend()
     plt.show()
     fitted_rs = [expfunc(nl, *ropts) for ropts in params_r]
@@ -81,22 +80,24 @@ def calc_alpha_beta(iters, chipsizes):
     fitted_bs = [expfunc(nl, *bopts) for bopts in params_b]
 
     plt.figure()
-    plt.subplot(5,1,1)
+    plt.subplot(3,1,1)
     for i, fitted_r in enumerate(fitted_rs):
         plt.plot(nl, fitted_r, '--')
-    plt.subplot(5,1,3)
+    plt.subplot(3,1,3)
     for i, fitted_b in enumerate(fitted_bs):
         plt.plot(nl, fitted_b, '--')
-    plt.subplot(5,1,4)
-    for i, fitted_m in enumerate(fitted_ms):
-        plt.plot(nl, [fitted_bs[i][j]/(fitted_m[j]+1e-7) for j in range(len(nl))], '--')
-    p = plt.subplot(5,1,5)
-    for i, fitted_b in enumerate(fitted_bs):
-        plt.plot(nl, [fitted_ms[i][j]/(fitted_b[j]+1e-7) for j in range(len(nl))], '--')
-    p = plt.subplot(5,1,2)
+    # plt.subplot(5,1,5)
+    # for i, fitted_b in enumerate(fitted_bs):
+    #     plt.plot(nl, [fitted_ms[i][j]/(fitted_b[j]+1e-7) for j in range(len(nl))], '--')
+    p = plt.subplot(3,1,2)
     for i, fitted_m in enumerate(fitted_ms):
         plt.plot(nl, fitted_m, '--', label=str(chipsizes[i]))
     p.legend(loc=1, bbox_to_anchor=(.6, 1.2, 0.5, 0.5))
+    plt.show()
+    plt.subplot(1,1,1)
+    for i, fitted_m in enumerate(fitted_ms):
+        plt.plot(nl, [fitted_bs[i][j]/(fitted_m[j]+1e-3) for j in range(len(nl))], '--', label=str(chipsizes[i]))
+    plt.legend()
     plt.show()
 
 
@@ -109,16 +110,58 @@ def skiplist(iterable, start, interval=1):
 
 
 def load_ab():
-    f = open("params.csv")
-    for l in f.readlines():
-        print(l)
     df = pd.read_csv("params.csv", header=1)
-    print(df.head())
-    for c in df.columns:
-        print(c)
+    # print(df.head())
+    return df
+
+def dfcprint(df, c):
+    print(df.columns[c])
+    print(getdfcol(df,c))
+
+
+def logfunc(value, const1, const2, const3):
+    return -const1*np.log(const2* (value+const3))
+
+
+def fit_ab(df):
+    chipsize_col = getdfcol(df,0)
+    chipsize_col = getdfcol(df,0)**2
+    plt.plot(chipsize_col, getdfcol(df,3), 'o-', label='real alpha arbitrary')
+    aapopt, pcov = curve_fit(logfunc, chipsize_col, getdfcol(df,3), p0=(13, 0.05, 10), bounds=([-300, 0.00001, -40], [100, 0.5, 30]))
+    print("alpha arbitrary", aapopt)
+    plt.plot(chipsize_col, logfunc(chipsize_col, *aapopt), 'r--', label="expected alpha arbitrary")
+
+    plt.plot(chipsize_col, getdfcol(df,5), 'o-', label='real alpha best')
+    abpopt, pcov = curve_fit(logfunc, chipsize_col, getdfcol(df,5), p0=(13, 0.05, 10), bounds=([-300, 0.00001, -40], [100, 0.5, 30]))
+    print("alpha best", abpopt)
+    plt.plot(chipsize_col, logfunc(chipsize_col, *abpopt), 'g--', label="expected alpha best")
+    plt.title("parametrization of alpha for arbitrary and best")
+    plt.legend()
+    plt.savefig("alpha_param_chipsize.png")
+    plt.show()
+
+    plt.plot(chipsize_col, getdfcol(df,4), 'b-', label='real beta arbitrary')
+    bapopt, pcov = curve_fit(logfunc, chipsize_col, getdfcol(df,4), p0=(13, 0.005, 10), bounds=([0, 0.0000001, -40], [300, 0.009, 300]))
+    print("beta arbitrary", bapopt)
+    plt.plot(chipsize_col, logfunc(chipsize_col, *bapopt), 'r--', label="expected beta arbitrary")
+
+    plt.plot(chipsize_col, getdfcol(df,6), 'o-', label='real beta best')
+    bbpopt, pcov = curve_fit(logfunc, chipsize_col, getdfcol(df,6), p0=(13, 0.005, 10), bounds=([0, 0.0000001, -40], [300, 0.009, 300]))
+    print("beta best", bbpopt)
+    plt.plot(chipsize_col, logfunc(chipsize_col, *bbpopt), 'g--',  label="expected beta best")
+    plt.title("parametrization of beta for arbitrary and best")
+    plt.legend()
+    plt.savefig("beta_param_chipsize.png")
+
+
+def getdfcol(df, c):
+    """ get c'th column values of dataframe
+    """
+    return df[df.columns[c]]
+
+def plot_ab(df):
     for col in skiplist(df.columns[1:], 0, interval=1):
         plt.plot(df[df.columns[0]], eval("df['" + col + "']"), label=col)
-
     plt.legend()
     plt.show()
     for col in skiplist(df.columns[1:], 1, interval=1):
@@ -130,4 +173,5 @@ def load_ab():
 if __name__ == '__main__':
     #calc_alpha_beta(1, [(i+2)*10 for i in range(6)])
     calc_alpha_beta(200, [(i+2)*10 for i in range(9)])
-    load_ab()
+    df = load_ab()
+    fit_ab(df)

@@ -1,7 +1,0 @@
-besluiten:
-
-mutatiewijze
-
-popsize = 30
-maxmut = 7
-runnermax = 3,5,7

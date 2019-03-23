@@ -1,9 +1,0 @@
-first 10-70, interval 1
-
-solvability niet percentage solved
-
-(best, 10)
-
-(functie fit -e^(-e^(-2c)))
-
-optimalisatie volgorde plannigsproblemen literatuur
