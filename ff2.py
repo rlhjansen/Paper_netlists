@@ -307,14 +307,14 @@ def calc_alpha_beta(iters, chipsizes):
     plt.savefig("exp_avg_best")
     plt.show()
     fit_ab("area", _arb=_arb, _mean=_mean, _best=_best, _worst=_worst)
-    fit_ab("edge size", _arb=_arb, _mean=_mean, _best=_best, _worst=_worst)
+    fit_ab("edge_size", _arb=_arb, _mean=_mean, _best=_best, _worst=_worst)
 
 
 def fit_ab(chipsizes, _arb=False, _mean=False, _best=False, _worst=False):
     df = load_ab()
     if chipsizes == "area":
         chipsize_col = getdfcol(df,0)**2
-    elif chipsizes == "edge size":
+    elif chipsizes == "edge_size":
         chipsize_col = getdfcol(df,0)
 
     arbitrary_alpha = getdfcol(df,1)
@@ -348,7 +348,7 @@ def fit_ab(chipsizes, _arb=False, _mean=False, _best=False, _worst=False):
         plt.plot(chipsize_col, logfunc(chipsize_col, *awpopt), c=fit, label="predicted \n worst case", linestyle='--')
 
     p.set_xlabel("chipsize")
-    plt.title("parametrization of alpha for average and best case solvability by "+chipsizes)
+    plt.title("parametrization of alpha for average and best case solvability by "+" ".join(chipsizes.split("_")))
     plt.legend()
     plt.savefig("alpha_param_chipsize_"+chipsizes+".png")
     plt.show()
