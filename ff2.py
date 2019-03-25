@@ -13,6 +13,7 @@ best_col = 'orange'
 mean_col = 'b'
 worst_col = 'magenta'
 
+
 def format_chipsize(cs):
     return str(cs)+"x"+str(cs)
 
@@ -34,16 +35,16 @@ def expfunc(nl, const1, const2):
 def lstr(iterable):
     return [str(elem) for elem in iterable]
 
-def determine_9x9_y(elem_n):
+def determine_3x3_y(elem_n):
     return not elem_n % 3
 
-def determine_9x9_solv(elem_n):
+def determine_3x3_solv(elem_n):
     return elem_n == 3
 
-def determine_9x9_nl(elem_n):
+def determine_3x3_nl(elem_n):
     return elem_n == 7
 
-def determine_9x9_x(elem_n):
+def determine_3x3_x(elem_n):
     return elem_n // 6
 
 
@@ -60,6 +61,86 @@ def calc_alpha_beta(iters, chipsizes):
     params_m = []
     params_w = []
     nl = [v for v in df['netlist length']]
+
+
+
+    _best = False
+    _mean = False
+    _arb = True
+    _worst = False
+    fig=plt.figure(figsize=(7,7))
+    fig.suptitle('effect of permutation on predicted solavability') # or plt.suptitle('Main title')
+    legend_loc = 5
+    plotfit = False
+    for j, cs in enumerate(chipsizes):
+        print((1+j+j//4)//4, (j+j//3)%4)
+        ax = plt.subplot2grid((3, 4), ((1+j+j//4)//4, (j+j//3)%4))
+        ax.set_title(format_chipsize(cs))
+        y_arb = df[rand_solv_str(cs)]
+        if not determine_3x3_x(j):
+            ax.set_xticks([])
+        else:
+            ax.set_xticks([10,50,90])
+        if determine_3x3_nl(j):
+            ax.set_xlabel("netlist length")
+        if not determine_3x3_y(j):
+            ax.set_yticks([])
+        if determine_3x3_solv(j):
+            ax.set_ylabel("solvability %")
+
+        if _arb:
+            if j==legend_loc:
+                plotscatter(nl, y_arb, c=arb_col, s=6, label="arbitrary case")
+                popt, pcov = ABNLfit(nl, y_arb, c=fit, plot=plotfit, label="predicted arbitrary \n case")
+            else:
+                plotscatter(nl, y_arb, c=arb_col, s=6)
+                popt, pcov = ABNLfit(nl, y_arb, c=fit, plot=plotfit)
+        else:
+            popt, pcov = ABNLfit(nl, y_arb, c=fit, plot=False)
+
+        y_mean = df[mean_solv_str(cs)]
+        if _mean:
+            if j==legend_loc:
+                plotscatter(nl, y_mean, c=mean_col, s=6, label="permutated average \n case")
+                poptm, pcov = ABNLfit(nl, y_mean, c=fit, plot=plotfit, label="predicted average \n case")
+            else:
+                plotscatter(nl, y_mean, c=mean_col, s=6)
+                poptm, pcov = ABNLfit(nl, y_mean, c=fit, plot=plotfit)
+        else:
+            poptm, pcov = ABNLfit(nl, y_mean, c=fit, plot=False)
+
+        y_best = df[best_solv_str(iters, cs)]
+        if _best:
+            if j==legend_loc:
+                plotscatter(nl, y_best, c=best_col, s=6, label="permutated best case")
+                poptb, pcov = ABNLfit(nl, y_best, c=best_fit, plot=plotfit, label="predicted permutated \n best case")
+            else:
+                plotscatter(nl, y_best, c=best_col, s=6)
+                poptb, pcov = ABNLfit(nl, y_best, c=best_fit, plot=plotfit)
+        else:
+            poptb, pcov = ABNLfit(nl, y_best, c=fit, plot=False)
+
+        y_worst = df[worst_solv_str(iters, cs)]
+        if _worst:
+            if j==legend_loc:
+                plotscatter(nl, y_worst, c=worst_col, s=6, label="permutated worst case")
+                poptw, pcov = ABNLfit(nl, y_worst, c=fit, plot=plotfit, label="predicted permutated \n worst case")
+            else:
+                plotscatter(nl, y_worst, c=worst_col, s=6)
+                poptw, pcov = ABNLfit(nl, y_worst, c=fit, plot=plotfit)
+        else:
+            poptw, pcov = ABNLfit(nl, y_worst, c=fit, plot=False)
+
+        if j==legend_loc:
+            # Put a legend to the right of the current axis
+            lgd = plt.legend(bbox_to_anchor=(1, 1.0))
+    plt.suptitle("solvability for different chipsizes")
+    plt.savefig("arb_3x3.png", bbox_extra_artists=(lgd,))
+    plt.show()
+
+
+    # start best vs mean
+
     _best = True
     _mean = True
     _arb = False
@@ -73,15 +154,15 @@ def calc_alpha_beta(iters, chipsizes):
         ax = plt.subplot2grid((3, 4), ((1+j+j//4)//4, (j+j//3)%4))
         ax.set_title(format_chipsize(cs))
         y_arb = df[rand_solv_str(cs)]
-        if not determine_9x9_x(j):
+        if not determine_3x3_x(j):
             ax.set_xticks([])
         else:
             ax.set_xticks([10,50,90])
-        if determine_9x9_nl(j):
+        if determine_3x3_nl(j):
             ax.set_xlabel("netlist length")
-        if not determine_9x9_y(j):
+        if not determine_3x3_y(j):
             ax.set_yticks([])
-        if determine_9x9_solv(j):
+        if determine_3x3_solv(j):
             ax.set_ylabel("solvability %")
 
         if _arb:
@@ -136,7 +217,7 @@ def calc_alpha_beta(iters, chipsizes):
             # Put a legend to the right of the current axis
             lgd = plt.legend(bbox_to_anchor=(1, 1.0))
     plt.suptitle("predicted solvability for different chipsizes")
-    plt.savefig("permutation_exp_compare_9x9.png", bbox_extra_artists=(lgd,))
+    plt.savefig("permutation_exp_compare_3x3.png", bbox_extra_artists=(lgd,))
     plt.show()
     param_csv.close()
 
@@ -149,15 +230,15 @@ def calc_alpha_beta(iters, chipsizes):
         ax = plt.subplot2grid((3, 4), ((1+j+j//4)//4, (j+j//3)%4))
         ax.set_title(format_chipsize(cs))
         y_arb = df[rand_solv_str(cs)]
-        if not determine_9x9_x(j):
+        if not determine_3x3_x(j):
             ax.set_xticks([])
         else:
             ax.set_xticks([10,50,90])
-        if determine_9x9_nl(j):
+        if determine_3x3_nl(j):
             ax.set_xlabel("netlist length")
-        if not determine_9x9_y(j):
+        if not determine_3x3_y(j):
             ax.set_yticks([])
-        if determine_9x9_solv(j):
+        if determine_3x3_solv(j):
             ax.set_ylabel("solvability %")
         if _arb:
             if j==legend_loc:
@@ -204,7 +285,7 @@ def calc_alpha_beta(iters, chipsizes):
         if j==legend_loc:
             # Put a legend to the right of the current axis
             lgd = plt.legend(bbox_to_anchor=(1, 1.0))
-    plt.savefig("permutation_real_compare_9x9.png", bbox_extra_artists=(lgd,))
+    plt.savefig("permutation_real_compare_3x3.png", bbox_extra_artists=(lgd,))
     plt.show()
 
     cs = 60
@@ -316,7 +397,7 @@ def fit_ab(chipsizes, _arb=False, _mean=False, _best=False, _worst=False):
         chipsize_col = getdfcol(df,0)**2
     elif chipsizes == "edge_size":
         chipsize_col = getdfcol(df,0)
-
+    interp_chip = [i for i in range(min(chipsize_col), max(chipsize_col), 1)]
     arbitrary_alpha = getdfcol(df,1)
     best_alpha = getdfcol(df,5)
     mean_alpha = getdfcol(df,3)
@@ -327,25 +408,25 @@ def fit_ab(chipsizes, _arb=False, _mean=False, _best=False, _worst=False):
         plotscatter(chipsize_col, arbitrary_alpha, c=arb_col, label='real alpha arbitrary')
         aapopt, pcov = curve_fit(logfunc, chipsize_col, arbitrary_alpha, p0=(13, 0.05, 10), bounds=([-300, 0.0001, -max(chipsize_col)], [400, 0.9, max(chipsize_col)]))
         print("alpha arbitrary", aapopt)
-        plt.plot(chipsize_col, logfunc(chipsize_col, *aapopt), c=fit, label="predicted \n arbitrary case", linestyle="--")
+        plt.plot(interp_chip, logfunc(interp_chip, *aapopt), c=fit, label="predicted \n arbitrary case", linestyle="--")
 
     if _best:
         plotscatter(chipsize_col, best_alpha, c=best_col, label='real alpha best')
         abpopt, pcov = curve_fit(logfunc, chipsize_col, best_alpha, p0=(13, 0.05, 10), bounds=([-300, 0.0001, -max(chipsize_col)], [400, 0.9, max(chipsize_col)]))
         print("alpha best", abpopt)
-        plt.plot(chipsize_col, logfunc(chipsize_col, *abpopt), c=best_fit, label="predicted \n best case", linestyle="--")
+        plt.plot(interp_chip, logfunc(interp_chip, *abpopt), c=best_fit, label="predicted \n best case", linestyle="--")
 
     if _mean:
         plt.scatter(chipsize_col, mean_alpha, c=mean_col, label='real alpha mean')
         ampopt, pcov = curve_fit(logfunc, chipsize_col, mean_alpha, p0=(13, 0.05, 10), bounds=([-300, 0.0001, -max(chipsize_col)], [40000, 0.9, max(chipsize_col)]))
         print("alpha mean", ampopt)
-        plt.plot(chipsize_col, logfunc(chipsize_col, *ampopt), c=fit, label="predicted \n average case", linestyle='--')
+        plt.plot(interp_chip, logfunc(interp_chip, *ampopt), c=fit, label="predicted \n average case", linestyle='--')
 
     if _worst:
         plotscatter(chipsize_col, worst_alpha, c=worst_col, label='real alpha worst')
         awpopt, pcov = curve_fit(logfunc, chipsize_col, worst_alpha, p0=(13, 0.05, 10), bounds=([-300, 0.0001, -max(chipsize_col)], [400, 0.9, max(chipsize_col)]))
         print("alpha worst", awpopt)
-        plt.plot(chipsize_col, logfunc(chipsize_col, *awpopt), c=fit, label="predicted \n worst case", linestyle='--')
+        plt.plot(interp_chip, logfunc(interp_chip, *awpopt), c=fit, label="predicted \n worst case", linestyle='--')
 
     p.set_xlabel("chipsize")
     plt.title("parametrization of alpha for average and best case solvability by "+" ".join(chipsizes.split("_")))
@@ -363,25 +444,25 @@ def fit_ab(chipsizes, _arb=False, _mean=False, _best=False, _worst=False):
         plotscatter(chipsize_col, arbitrary_beta, c=arb_col, label='real arbitrary case')
         bapopt, pcov = curve_fit(logfunc, chipsize_col, arbitrary_beta, p0=(13, 0.005, 10), bounds=([-40, -0.5, -40000], [300, 0.5, 10000]))
         print("beta arbitrary", bapopt)
-        plt.plot(chipsize_col, logfunc(chipsize_col, *bapopt), c=fit, label="predicted beta arbitrary", linestyle="--")
+        plt.plot(interp_chip, logfunc(interp_chip, *bapopt), c=fit, label="predicted beta arbitrary", linestyle="--")
 
     if _best:
         plotscatter(chipsize_col, best_beta, c=best_col, label='real best case')
         bbpopt, pcov = curve_fit(logfunc, chipsize_col, best_beta, p0=(13, 0.005, 10), bounds=([-40, -0.5, -400], [300, 0.5, 10000]))
         print("beta best", bbpopt)
-        plt.plot(chipsize_col, logfunc(chipsize_col, *bbpopt), c=best_fit,  label="predicted beta best", linestyle="--")
+        plt.plot(interp_chip, logfunc(interp_chip, *bbpopt), c=best_fit,  label="predicted beta best", linestyle="--")
 
     if _mean:
         plotscatter(chipsize_col, mean_beta, c=mean_col, label='real mean case')
         bapopt, pcov = curve_fit(logfunc, chipsize_col, mean_beta, p0=(13, 0.005, 10), bounds=([-40, -0.5, -400], [300, 2, 10000]))
         print("beta arbitrary", bapopt)
-        plt.plot(chipsize_col, logfunc(chipsize_col, *bapopt), c=fit, label="predicted beta arbitrary", linestyle="--")
+        plt.plot(interp_chip, logfunc(interp_chip, *bapopt), c=fit, label="predicted beta arbitrary", linestyle="--")
 
     if _worst:
         plotscatter(chipsize_col, worst_beta, c=worst_col, label='real worst case')
         bbpopt, pcov = curve_fit(logfunc, chipsize_col, worst_beta, p0=(13, 0.005, 10), bounds=([-40, -0.5, -400], [300, 2, 10000]))
         print("beta best", bbpopt)
-        plt.plot(chipsize_col, logfunc(chipsize_col, *bbpopt), c=fit,  label="predicted beta worst", linestyle='--')
+        plt.plot(interp_chip, logfunc(interp_chip, *bbpopt), c=fit,  label="predicted beta worst", linestyle='--')
 
     p.set_xlabel("chipsize")
     plt.title("parametrization of beta for average and best case solvability by " + chipsizes)
