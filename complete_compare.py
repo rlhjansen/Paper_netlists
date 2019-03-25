@@ -493,6 +493,7 @@ def make_netlen_solvabilitydict(files, netlengths, netlendict, chipsize, iters):
                 netlen_solvabilitydict[k]['f'].append(1 if firstcount == k else 0)
                 netlen_solvabilitydict[k]['mc'].append(mean_count)
                 netlen_solvabilitydict[k]['bc'].append(1 if best_count == k else 0)
+                netlen_solvabilitydict[k]['minc'].append(1 if min_count == k else 0)
     return netlen_solvabilitydict
 
 
@@ -510,7 +511,6 @@ def make_solvability_plots(netlengths, solvabilitydict, chipsize, directsave=Tru
         ks.append(k)
         solvability_scores_first.append(mean(ysf))
         solvability_scores_best.append(mean(ysb))
-        print(k, mean(ysf), ysf)
     if first:
         plt.plot(ks, solvability_scores_first, label="solvability unoptimized" + str(chipsize) + "x" + str(chipsize))
     if best:
@@ -579,9 +579,11 @@ def solvability_header_gen(chipsizes, best_of_N):
         random_solvability = ["solvability by random {}x{}".format(str(cs), str(cs))]
         mean_solvability = ["solvability of mean {}x{}".format(str(cs), str(cs))]
         best_solvability = ["solvability best of " +str(best_of_N) + " {}x{}".format(str(cs), str(cs))]
+        worst_solvability = ["solvability worst of " +str(best_of_N) + " {}x{}".format(str(cs), str(cs))]
         yield random_solvability
         yield mean_solvability
         yield best_solvability
+        yield worst_solvability
 
 
 def make_solvability_csvs(chipsizes, best_of_N):
@@ -590,22 +592,24 @@ def make_solvability_csvs(chipsizes, best_of_N):
     netlen_solvabilitydicts_persize = []
     netlengths = [i+10 for i in range(81)]
     csv_data_walk = [["netlist length"]] + [elem for elem in solvability_header_gen(chipsizes, best_of_N)]
+    print(csv_data_walk)
     dw_len = len(csv_data_walk)
     csv_data_walk[0].extend([str(nl) for nl in netlengths])
     for i, chipsize in enumerate(chipsizes):
         print("getting solvability for chipsize", chipsize)
-        j = i*3
+        j = i*4
         files, netlendict, netlen_countdict, netlen_solvabilitydict = gather_data_chipsize(chipsize, netlengths, best_of_N)
-        print("arbitrary")
-        lprint([str(mean(netlen_solvabilitydict[n]['f'])) for n in netlengths][:5])
-        print("mean")
-        lprint([str(mean(netlen_solvabilitydict[n]['mc'])) for n in netlengths][:5])
-        print("bests")
-        lprint([str(mean(netlen_solvabilitydict[n]['bc'])) for n in netlengths][:5])
-        input()
+        # print("arbitrary")
+        # lprint([str(mean(netlen_solvabilitydict[n]['f'])) for n in netlengths][:5])
+        # print("mean")
+        # lprint([str(mean(netlen_solvabilitydict[n]['mc'])) for n in netlengths][:5])
+        # print("bests")
+        # lprint([str(mean(netlen_solvabilitydict[n]['bc'])) for n in netlengths][:5])
+        # input()
         csv_data_walk[j+1].extend([str(mean(netlen_solvabilitydict[n]['f'])) for n in netlengths])
         csv_data_walk[j+2].extend([str(mean(netlen_solvabilitydict[n]['mc'])) for n in netlengths])
         csv_data_walk[j+3].extend([str(mean(netlen_solvabilitydict[n]['bc'])) for n in netlengths])
+        csv_data_walk[j+4].extend([str(mean(netlen_solvabilitydict[n]['minc'])) for n in netlengths])
     with open("compare_solvability_best_of_"+str(best_of_N)+".csv", "w+") as inf:
         for i, netlength in enumerate(csv_data_walk[0]):
             line = ",".join([csv_data_walk[j][i] for j in range(dw_len)]) + "\n"
