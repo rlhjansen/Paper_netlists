@@ -17,11 +17,7 @@ BASE_LAYER_TITLE = ""
 RESIZE = 1
 
 # Marker properties on plot
-shapes_string = "-"
-SHAPES = shapes_string.split(' ')
-COLOURS = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 
-col_len = len(COLOURS)
 
 
 
@@ -30,6 +26,10 @@ col_len = len(COLOURS)
 ###############################################################################
 
 def get_markers(n):
+    shapes_string = "-"
+    SHAPES = shapes_string.split(' ')
+    COLOURS = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+    col_len = len(COLOURS)
     return [SHAPES[i % len(SHAPES)] + COLOURS[i % col_len] for i in range(n)]
 
 
@@ -75,7 +75,7 @@ def remove_empty_paths(paths, order):
     return clean_paths, clean_order
 
 
-def plot_circuit(paths, order, gates, mesh_height, x, y, select, save_name, title=None, resize=1):
+def plot_circuit(paths, order, gates, x, y, select, save_name, title, resize=1, mesh_height=None):
     """ Plots the complete circuit in 3D, filled by way of the paths.
 
     :param paths: List of tuples of tuples
@@ -87,7 +87,8 @@ def plot_circuit(paths, order, gates, mesh_height, x, y, select, save_name, titl
     :param select: Bool, True to manually select direction from which to view
         the plotted circuit, False for autoview-save.
     :param save_name: filename for autoview-save
-    :param title: creates title
+    :param title: creates title, title="placed" makes title into:
+        'placement of "+str(len(paths)) + "/" + str(len(order)) + "nets"'
     :param resize: resizes the plot when saving (make lower when experimenting
         to save time, e.g. 0.3)
     """
@@ -100,13 +101,12 @@ def plot_circuit(paths, order, gates, mesh_height, x, y, select, save_name, titl
 
     #title & nets
     c_paths, c_order = remove_empty_paths(paths, order)
-    print(c_paths, c_order)
     xpp, ypp, zpp = paths_to_plotlines(c_paths)
     plotcount = len(xpp)
     ax.set_title(title)
 
     # nets
-    markers = get_markers(len(xpp))
+    markers = get_markers(plotcount)
     for i in range(plotcount):
         ax.plot(xpp[i], ypp[i], zpp[i], markers[i], label=c_order[i])
 
@@ -117,20 +117,29 @@ def plot_circuit(paths, order, gates, mesh_height, x, y, select, save_name, titl
     #s.set_edgecolors = s.set_facecolors = lambda *args: None
 
     #ticks
-    ax.set_zticks(np.arange(0, mesh_height + 1, 1.0))
     ax.set_xticks(np.array([]))
     ax.set_yticks(np.array([]))
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax.set_zlim((0,7))
-    ax.set_title("placement of "+str(len(paths)) + "/" + str(len(order)) + "nets")
+    if title == "placed":
+        ax.set_title("placement of "+str(len(paths)) + "/" + str(len(order)) + "nets")
+
 
     #layer meshes
-    if mesh_height:
-        add_mesh(ax, mesh_height, x, y)
-    else:
-        add_mesh(ax, mesh_height+1, x, y)
+    if mesh_height=="fitting":
+        mesh_fit = get_wire_height(paths)
+        ax.set_zticks(np.arange(0, mesh_fit + 1, 1.0))
+        add_mesh(ax, mesh_fit+1, x, y)
+    elif mesh_height=="full":
+        add_mesh(ax, 8, x, y)
+        ax.set_zticks(np.arange(0, 8, 1.0))
         ax.set_zlim(np.array([0, mesh_height+1]))
+    elif isinstance(mesh_height, int):
+        add_mesh(ax, mesh_height, x, y)
+        ax.set_zticks(np.arange(0, mesh_height + 1, 1.0))
+    else:
+        ax.set_zticks(np.arange(0, 1, 1.0))
 
     #fig.subplots_adjust(left=0, right=1, bottom=0, top=7)
     plt.draw()
@@ -142,6 +151,9 @@ def plot_circuit(paths, order, gates, mesh_height, x, y, select, save_name, titl
         fig.savefig(save_name)
         plt.close()
 
+
+def get_wire_height(paths):
+    return max([max([node[2] for node in path]) for path in paths])
 
 def add_mesh(ax, h, x, y):
     for height in range(h):
@@ -227,33 +239,24 @@ def get_circuit_basics(circuit, order):
     return g_coords, paths, build_paths
 
 
-###############################################################################
-# Model types
-###############################################################################
-""" Selecting netlist, net order, circuit layout (gates) & other parameters
-
-are all done at the top of the file as of now, functions here only take account of what is needed for the drawing.
-
-I REPEAT: GLOBAL VARIABLES GALORE!
-"""
 
 
-def create_model(simple_obj, ord, titlestring="", height=7, select=False, save_name="net model"):
+def create_model(simple_obj, ord, title, select=False, save_name="net model", mesh_height=None):
     simple_obj.circuit.connect()
     circuit = simple_obj.circuit
 
     g_coords, paths, _ = get_circuit_basics(circuit, ord)
     c_save_name = save_name + ",".join([str(x),str(n),str(nX)]) + ".png"
-    plot_circuit(paths, LONG_ORD, g_coords, height, simple_obj.x, simple_obj.y, select, c_save_name, title=titlestring, resize=RESIZE)
+    plot_circuit(paths, LONG_ORD, g_coords, simple_obj.x, simple_obj.y, select, c_save_name, title, resize=RESIZE, mesh_height=mesh_height)
 
 
-def create_base_model(simple_obj, titlestring, select=False, save_name="bottom layer model.png"):
+def create_base_model(simple_obj, title, select=False, save_name="bottom layer model.png"):
     s = simple.SIMPLY(c, cX, n, nX, x, y, 'NEIN', iters=1, no_save=True)
     s.circuit.connect()
     circuit = s.circuit
 
     g_coords, paths, _ = get_circuit_basics(circuit, LONG_ORD)
-    plot_circuit([], [], g_coords, False, select, X, Y, save_name, title=titlestring)
+    plot_circuit([], [], g_coords, False, select, X, Y, save_name, title=title)
 
 
 def create_model_gif(subdir, select=False, height=7, save_name="gif_model_parts", resize=1, redraw=False, del_after=False):
@@ -265,7 +268,7 @@ def create_model_gif(subdir, select=False, height=7, save_name="gif_model_parts"
 
             c_save_name = save_name + str(i).zfill(5) + ".png"
             c_save_name = create_fpath(subdir, c_save_name)
-            plot_circuit(build_paths[i], order, g_coords, height, X, Y, select, c_save_name, title=" ", resize=resize)
+            plot_circuit(build_paths[i], order, g_coords, height, X, Y, select, c_save_name, title="", resize=resize)
 
     with imageio.get_writer(os.path.join(subdir,'model_gif.gif'), mode='I', subrectangles=True) as writer:
         for filename in os.listdir(subdir):
@@ -284,10 +287,10 @@ def create_model_gif(subdir, select=False, height=7, save_name="gif_model_parts"
 # nX = 15
 # x = 60
 # y = 60
-# MESH_HEIGHT = 3
 # LONG_ORD = "n38,n3,n37,n47,n28,n18,n9,n36,n39,n10,n26,n21,n1,n33,n16,n29,n13,n0,n17,n44,n34,n24,n35,n31,n6,n23,n48,n40,n8,n11,n41,n42,n7,n43,n49,n2,n12,n30,n46,n32,n19,n5,n25,n45,n20,n15,n14,n22,n27,n4".split(",")
 # s = simple.SIMPLY(c, cX, n, nX, x, y, 'NEIN', iters=1, no_save=True)
-# create_model(s, LONG_ORD, "", height=MESH_HEIGHT, select=True, save_name="bottom layer model.png")
+# create_model(s, LONG_ORD, "", select=True, save_name="bottom layer model.png")
+
 
 # c = 100
 # cX = 0
@@ -295,10 +298,10 @@ def create_model_gif(subdir, select=False, height=7, save_name="gif_model_parts"
 # nX = 14
 # x = 60
 # y = 60
-# MESH_HEIGHT = 4
 # LONG_ORD = "n27,n10,n40,n56,n31,n57,n71,n72,n23,n2,n53,n75,n39,n16,n78,n49,n12,n4,n61,n5,n20,n35,n63,n41,n50,n34,n37,n58,n51,n55,n38,n26,n67,n47,n65,n69,n66,n62,n64,n29,n25,n1,n60,n43,n28,n79,n8,n13,n0,n74,n33,n14,n19,n7,n76,n54,n70,n11,n3,n42,n68,n52,n30,n36,n24,n17,n21,n77,n9,n48,n15,n32,n46,n18,n6,n59,n44,n73,n22,n45".split(",")
 # s = simple.SIMPLY(c, cX, n, nX, x, y, 'NEIN', iters=1, no_save=True)
-# create_model(s, LONG_ORD, "", height=MESH_HEIGHT, select=True, save_name="bottom layer model.png")
+# create_model(s, LONG_ORD, "", select=True, save_name="bottom layer model.png")
+
 
 c = 100
 cX = 0
@@ -306,10 +309,9 @@ n = 20
 nX = 0
 x = 60
 y = 60
-MESH_HEIGHT = 4
 LONG_ORD = "n4,n14,n17,n10,n9,n5,n13,n15,n16,n1,n2,n11,n12,n19,n6,n8,n7,n18,n0,n3".split(",")
 s = simple.SIMPLY(c, cX, n, nX, x, y, 'NEIN', iters=1, no_save=True)
-create_model(s, LONG_ORD, "", height=MESH_HEIGHT, select=True, save_name="bottom layer model.png")
+create_model(s, LONG_ORD, "", select=True, save_name="bottom layer model.png", mesh_height="fitting")
 
 
 
@@ -317,7 +319,6 @@ create_model(s, LONG_ORD, "", height=MESH_HEIGHT, select=True, save_name="bottom
 
 are all done at the top of the file as of now, functions here only take account of what is needed for the drawing.
 
-I REPEAT: WHEN CALLING THESE FUNCTIONS, GLOBAL VARIABLES GALORE!
 """
 
 
