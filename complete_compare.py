@@ -576,7 +576,7 @@ def make_solvability_comparison(sizes, iters):
 
 def solvability_header_gen(chipsizes, best_of_N):
     for cs in chipsizes:
-        random_solvability = ["solvability by random {}x{}".format(str(cs), str(cs))]
+        random_solvability = ["solvability by arb {}x{}".format(str(cs), str(cs))]
         mean_solvability = ["solvability of mean {}x{}".format(str(cs), str(cs))]
         best_solvability = ["solvability best of " +str(best_of_N) + " {}x{}".format(str(cs), str(cs))]
         worst_solvability = ["solvability worst of " +str(best_of_N) + " {}x{}".format(str(cs), str(cs))]
