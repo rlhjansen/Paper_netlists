@@ -165,32 +165,34 @@ def parse_args(args):
             print("invalid argument\neither gen or optimize")
 
 
-def simple_generator(c, cX, lens, puzzels, x, y, tag="TESTRUN"):
-    starttime = datetime.datetime.now()
+def simple_generator(c, cX, n, puzzels, x, y, tag="TESTRUN", iters=None):
+    for nx in range(puzzels):
+        net_num = nx
+        cX = 0
+        c = 100
+        s = simple.SIMPLY(c, cX, n, net_num, x, y, tag, iters=iters)
+        yield s
+
+def meh(alg_obj):
+    alg_obj.run_algorithm()
+
+def gatherSimple(size, iters=1, start_add=71, end_iter=20):
+    print("gathering for chip of size:", size, "x", size)
+    print("gatherin for netlists of length", start_add, "up to", end_iter-1+start_add)
+    print("getting", iters, "orders per netlist")
+
+    lens = [i+start_add for i in range(end_iter)]
     for n in lens:
-        for nx in range(puzzels):
-            print("time elapsed:\t", datetime.datetime.now() - starttime)
-            net_num = nx
-            cX = 0
-            c = 100
-            s = simple.SIMPLY(c, cX, n, net_num, x, y, tag, iters=1)
-            yield s
-
-def meh(something):
-    pass
-
-def gatherSimple(x, y):
-    pool = mp.Pool(mp.cpu_count())
-    lens = [i+10 for i in range(61)]
-    Simples = simple_generator(100, 0, lens, 20, x, y, tag="TESTRUN")
-    amount = next(Simples)
-    for simple in Simples:
-        pool.apply_async(meh, args=(simple,))
-    pool.close()
+        pool = mp.Pool(mp.cpu_count()-1)
+        Simples = simple_generator(100, 0, n, 20, size, size, tag="TESTRUN", iters=iters)
+        pool.map(meh, Simples)
+        pool.close()
 
 
 
 if __name__ == '__main__':
     #parse_args(sys.argv)
-    for chipsize in [20, 30, 40, 50, 60, 70, 80]:
-        gatherSimple(chipsize, chipsize)
+    starttime = datetime.datetime.now()
+    for chipsize in [20, 30, 40, 50, 60, 70, 80, 90, 100]:
+        gatherSimple(chipsize, iters=200)
+        print("time elapsed:\t", datetime.datetime.now() - starttime)

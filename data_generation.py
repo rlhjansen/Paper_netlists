@@ -70,10 +70,10 @@ def main(x, y, netcount=10):
 
 
 if __name__ == '__main__':
-    netlens = [i+10 for i in range(61)]
-    main(90, 90, netcount=20)
-    main(100, 100, netcount=20)
-    # for n in netlens:
-    #
-    #     gen_from_established(100, 0, 90, 90, n, 10)
-    #     gen_from_established(100, 0, 100, 100, n, 10)
+    netlens = [i+71 for i in range(20)]
+    # main(90, 90, netcount=20)
+    # main(100, 100, netcount=20)
+    for size in [(i+2)*10 for i in range(9)]:
+        for n in netlens:
+            gen_from_established(100, 0, size, size, n, 20)
+            gen_from_established(100, 0, size, size, n, 20)
