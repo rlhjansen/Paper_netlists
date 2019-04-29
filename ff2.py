@@ -39,6 +39,11 @@ def mean_solv_str(chipsize):
 def expfunc(nl, const1, const2):
     return np.exp(-np.exp(2*(nl-const1)*const2))
 
+@written_math("1 - (1 /(1+ np.exp((nl-shift)*slope)))")
+def regular_logistic(nl, shift, slope):
+    return 1 - (1 /(1+ np.exp(-(nl-shift)*slope)))
+
+
 def lstr(iterable):
     return [str(elem) for elem in iterable]
 
@@ -56,27 +61,27 @@ def determine_3x3_x(elem_n):
 
 
 
-def save_ab(chipsizes):
+def save_ab(chipsizes, fitfunc):
     datafile = "compare_solvability_best_of_200.csv"
-    df = pd.read_csv(datafile)
+    df = pd.read_csv(datafile, index_col="netlist length")
+    nl = np.array(df.index.values.tolist())
 
     param_csv = open("params.csv", "w+")
     param_csv.write(", arbitrary netlists,,mean solvability,,optimized netlist order,,worst order,\n")
-    param_csv.write("chipsize (XxZ), arb_a, arb_b, mean_a, mean_b, best_a, best_b, worst_a, worst_b\n")
-    nl = [v for v in df['netlist length']]
+    param_csv.write("chipsize (XxZ),arb_a,arb_b,mean_a,mean_b,best_a,best_b,worst_a,worst_b\n")
     for j, chipsize in enumerate(chipsizes):
 
         y_arb = df[arb_solv_str(chipsize)]
-        popt, pcov = ABNLfit(nl, y_arb, c=fit_col, plot=False)
+        popt, pcov = ABNLfit(nl, y_arb, fit_col, fitfunc, plot=False)
 
         y_mean = df[mean_solv_str(chipsize)]
-        poptm, pcov = ABNLfit(nl, y_mean, c=fit_col, plot=False)
+        poptm, pcov = ABNLfit(nl, y_mean, fit_col, fitfunc,plot=False)
 
-        y_best = df[best_solv_str(200, cs)]
-        poptb, pcov = ABNLfit(nl, y_best, c=fit_col, plot=False)
+        y_best = df[best_solv_str(chipsize)]
+        poptb, pcov = ABNLfit(nl, y_best, fit_col,fitfunc, plot=False)
 
-        y_worst = df[worst_solv_str(200, cs)]
-        poptw, pcov = ABNLfit(nl, y_worst, c=fit_col, plot=False)
+        y_worst = df[worst_solv_str(chipsize)]
+        poptw, pcov = ABNLfit(nl, y_worst, fit_col, fitfunc,plot=False)
         param_csv.write(",".join([str(chipsize)]+lstr(popt)+lstr(poptm)+lstr(poptb)+lstr(poptw))+"\n")
 
 
@@ -89,14 +94,14 @@ def conditional_label(boolean_value, label):
 
 def plot_alpha_beta(chipsizes, title, plot_savefile):
     datafile = "compare_solvability_best_of_200.csv"
-    df = pd.read_csv(datafile)
-    ab_df = pd.read_csv("params.csv")
+    df = pd.read_csv(datafile, index_col="netlist length")
+    nl = np.array(df.index.values.tolist())
+    ab_df = load_ab()
 
     params_r = []
     params_b = []
     params_m = []
     params_w = []
-    nl = [v for v in df['netlist length']]
 
     _best = False
     _mean = False
@@ -136,7 +141,7 @@ def plot_alpha_beta(chipsizes, title, plot_savefile):
             ABNL_plot(nl, y_mean, c=fit_col, label=conditional_label(labelwindow, "predicted average \n case"))
 
         if _best:
-            y_best = df[best_solv_str(200, cs)]
+            y_best = df[best_solv_str(chipsize)]
             poptb = ab_df[best_solv_str(chipsize)]
             plotscatter(nl, y_best, c=best_col, s=6, label=conditional_label(labelwindow, "permutated best case"))
             ABNL_plot(nl, poptb, c=best_fit, label=conditional_label(labelwindow, "predicted permutated \n best case"))
@@ -156,27 +161,32 @@ def plot_alpha_beta(chipsizes, title, plot_savefile):
     plt.show()
 
 
-def plot_fits(types_of_fit, subtitles, suptitle):
-    ab_df = pd.read_csv("params.csv")
+def plot_fits(types_of_fit, suptitle, fitfunc, scatter=False):
+    ab_df = load_ab()
     datafile = "compare_solvability_best_of_200.csv"
-    df = pd.read_csv(datafile)
-    nl = df.index.values.tolist()
+    df = pd.read_csv(datafile, index_col="netlist length")
+    nl = np.array(df.index.values.tolist())
 
     type_count = len(types_of_fit)
     sizes = ab_df.index.values.tolist()
     plt.figure(figsize=(7,7))
+    # print(nl)
+    # input()
     for i, t in enumerate(types_of_fit):
-        fitted_vals = [expfunc(nl, ab_df[t+'_a'][size], ab_df[t+'_b'][size]) for size in sizes]
+        fitted_vals = [fitfunc(nl, ab_df[t+'_a'][size], ab_df[t+'_b'][size]) for size in sizes]
 
         p = plt.subplot(type_count,1,i+1)
         plt.setp(p.get_xticklabels(), visible=False)
-        for i, fitted_m in enumerate(fitted_ms):
+        for j, fitted_m in enumerate(fitted_vals):
             plt.plot(nl, fitted_m)
+            if scatter:
+                y = df[eval(t+"_solv_str")((2+sizes[j])*10)]
+                plt.scatter(nl, y, c=arb_col, label=t, alpha=0.4)
         box = p.get_position()
         p.set_position([box.x0, box.y0 + box.height*0.1,
                      box.width * 0.7, box.height])
         p.set_ylabel("solvability %")
-        p.set_title(titles[i])
+        p.set_title(types_of_fit[i])
         p.set_ylabel("routability %")
         p.legend(loc="upper left", bbox_to_anchor=(1.05, 0.8, 1.0, 1.0))
 
@@ -188,28 +198,63 @@ def plot_fits(types_of_fit, subtitles, suptitle):
     plt.show()
 
 
-def plot_fits_dif(t1, t2, subtitles, suptitle):
-    ab_df = pd.read_csv("params.csv")
-    datafile = "compare_solvability_best_of_200.csv"
-    df = pd.read_csv(datafile)
-    nl = df.index.values.tolist()
 
-    type_count = len(types_of_fit)
+def compare_expected_best(fitfunc):
+    ["best", "mean"]
+    ab_df = load_ab()
+    datafile = "compare_solvability_best_of_200.csv"
+    df = pd.read_csv(datafile, index_col="netlist length")
+    nl = np.array(df.index.values.tolist())
+
     sizes = ab_df.index.values.tolist()
     plt.figure(figsize=(7,7))
-    fit_difs = [expfunc(nl, ab_df[t1+'_a'][size], ab_df[t1+'_b'][size]) - expfunc(nl, ab_df[t2+'_a'][size], ab_df[t2+'_b'][size]) for size in sizes]
-    for dif in fit_difs:
+    fitted_vals = [fitfunc(nl, ab_df["mean"+'_a'][size], ab_df["mean"+'_b'][size]) for size in sizes]
+    fitted_bests = [fitfunc(nl, ab_df["best"+'_a'][size], ab_df["best"+'_b'][size]) for size in sizes]
+    expected_bests = [[1.0 - (1.0-val)**200 for val in fv] for fv in fitted_vals]
+    p = plt.subplot(3,1,1)
+    plt.setp(p.get_xticklabels(), visible=True)
+    for fitted_m in fitted_vals:
+        p.plot(nl, fitted_m, c='b')
+    p = plt.subplot(3,1,2)
+    plt.setp(p.get_xticklabels(), visible=True)
+    for fitted_be in expected_bests:
+        p.plot(nl, fitted_be, c='r')
+    p = plt.subplot(3,1,3)
+    plt.setp(p.get_xticklabels(), visible=True)
+    for fitted_b in fitted_bests:
+        p.plot(nl, fitted_b, c='g')
+    p.set_ylabel("solvability %")
+    p.set_title("mean")
+    p.set_ylabel("routability %")
+    p.legend(loc="upper left", bbox_to_anchor=(1.05, 0.8, 1.0, 1.0))
 
-        p = plt.subplot(type_count,1,i+1)
+    # plt.suptitle("predicted solvability for differently sized chips\n\n")
+    plt.suptitle("compare expected best vs real best")
+    p.set_xlabel("netlist length")
+
+    plt.savefig("predicted_chipsize_compare.png")
+    plt.show()
+
+
+def plot_fits_dif(t1, t2, fitfunc, suptitle):
+    ab_df = load_ab()
+    datafile = "compare_solvability_best_of_200.csv"
+    df = pd.read_csv(datafile, index_col="netlist length")
+    nl = df.index.values.tolist()
+
+    sizes = ab_df.index.values.tolist()
+    plt.figure(figsize=(7,7))
+    fit_difs = [fitfunc(nl, ab_df[t1+'_a'][size], ab_df[t1+'_b'][size]) - expfunc(nl, ab_df[t2+'_a'][size], ab_df[t2+'_b'][size]) for size in sizes]
+    fit_difs_maxs = [np.argmax(fd) for fd in fit_difs]
+    for dif in fit_difs:
+        p = plt.subplot(111)
         plt.setp(p.get_xticklabels(), visible=False)
-        p.plot(nl, fitted_m)
-        box = p.get_position()
-        p.set_position([box.x0, box.y0 + box.height*0.1,
-                     box.width * 0.7, box.height])
+        p.plot(nl, dif)
         p.set_ylabel("solvability %")
-        p.set_title(titles[i])
         p.set_ylabel("routability %")
         p.legend(loc="upper left", bbox_to_anchor=(1.05, 0.8, 1.0, 1.0))
+    p.scatter([nl[v] for v in fit_difs_maxs], [fit_difs[i][v] for i, v in enumerate(fit_difs_maxs)])
+    p.scatter([nl[v] for v in fit_difs_maxs], [1 for i, v in enumerate(fit_difs_maxs)])
 
     # plt.suptitle("predicted solvability for differently sized chips\n\n")
     plt.suptitle(suptitle)
@@ -226,16 +271,20 @@ def scatter_routability(types_of_scatter, cs, end=False, title=None, savename=No
     datafile = "compare_solvability_best_of_200.csv"
     df = pd.read_csv(datafile)
     nl = df.index.values.tolist()
-    if print_options:
-        print(df.columns)
     plt.figure(figsize=(7,7))
-    type_count = len(types_of_scatter)
+    type_count = len(types_of_scatter) + 1
     for i, t in enumerate(types_of_scatter):
 
         p = plt.subplot(type_count,1,i + 1)
         y_arb = df[eval(t+"_solv_str")(cs)]
         plt.scatter(nl, y_arb, c=arb_col, label=t, alpha=0.4)
         p.set_ylabel("routability %")
+
+    p = plt.subplot(type_count,1, 3)
+    y_arb = 1 - (1 - df[eval("mean_solv_str")(cs)])**200
+    plt.scatter(nl, y_arb, c=arb_col, label=t, alpha=0.4)
+    p.set_ylabel("routability %")
+
 
     if end:
         if title:
@@ -330,15 +379,16 @@ def fit_ab(chipsizes, _arb=False, _mean=False, _best=False, _worst=False):
 def plotscatter(nl, solvability, c, label=None, alpha=0.4, s=30):
     plt.scatter(nl, solvability, c=c, label=label, alpha=alpha, s=s)
 
-def ABNLfit(nl, solvability, c, label=None, plot=False):
-    popt, pcov = curve_fit(expfunc, nl, solvability, p0=(40, 0.05), bounds=([-100, -2], [200, 1]))
+def ABNLfit(nl, solvability, c, fitfunc, label=None, plot=False):
+    # popt, pcov = curve_fit(fitfunc, nl, solvability, p0=(40, 0.05), bounds=([-100, -2], [200, 1]))
+    popt, pcov = curve_fit(fitfunc, nl, solvability, p0=(0.05, 0.05), bounds=([-1e6, 1e-5], [1e6, 1]))
     return popt, pcov
 
 def ABNL_plot(nl, popts, c, label=None):
     if label:
-        plt.plot(nl, expfunc(nl, *popt), c=c, linestyle='--', label=label)
+        plt.plot(nl, regular_logistic(nl, *popt), c=c, linestyle='--', label=label)
     else:
-        plt.plot(nl, expfunc(nl, *popt), c=c, linestyle='--')
+        plt.plot(nl, regular_logistic(nl, *popt), c=c, linestyle='--')
 
 
 
@@ -386,13 +436,16 @@ def plot_ab(df):
 
 
 if __name__ == '__main__':
-    save_ab([(i+2)*10 for i in range(9)])
+    fitfunc = expfunc
+    save_ab([(i+2)*10 for i in range(9)], fitfunc)
     _arb = False
     _mean = True
-    _best = True
+    _best = False
     _worst = False
-    # scatter_routability(["arb", "mean"], 50, end=True, savename="k.png")
+    fitfunc = regular_logistic
+    scatter_routability(["mean", "best"], 100, end=True, savename="k.png")
+    # plot_fits(["best", "mean"],"" ,fitfunc, scatter=True)
+    # plot_fits_dif("best", "mean", fitfunc, "difference best and mean")
     # fit_ab("area", _arb=_arb, _mean=_mean, _best=_best, _worst=_worst)
     # fit_ab("edge_size", _arb=_arb, _mean=_mean, _best=_best, _worst=_worst)
-    # plot_fits(["arb", "mean"], 3, "wew")
-    plot_fits_dif("best", "best", subtitles, suptitle)
+    # compare_expected_best(fitfunc)

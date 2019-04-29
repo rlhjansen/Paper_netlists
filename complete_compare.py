@@ -514,7 +514,7 @@ def make_solvability_plots(netlengths, solvabilitydict, chipsize, directsave=Tru
     if first:
         plt.plot(ks, solvability_scores_first, label="solvability unoptimized" + str(chipsize) + "x" + str(chipsize))
     if best:
-        plt.plot(ks, solvability_scores_best, label="solvability based on best of 200" + str(chipsize) + "x" + str(chipsize))
+        plt.plot(ks, solvability_scores_best, label="solvability based on best of" + str(chipsize) + "x" + str(chipsize))
     if directsave:
         add_solvability_labels()
         new_fname = os.path.join(destinationpath, "first_solvability" + str(chipsize) + "x" + str(chipsize) + ".png")
@@ -578,8 +578,8 @@ def solvability_header_gen(chipsizes, best_of_N):
     for cs in chipsizes:
         random_solvability = ["solvability by arb {}x{}".format(str(cs), str(cs))]
         mean_solvability = ["solvability of mean {}x{}".format(str(cs), str(cs))]
-        best_solvability = ["solvability best of " +str(best_of_N) + " {}x{}".format(str(cs), str(cs))]
-        worst_solvability = ["solvability worst of " +str(best_of_N) + " {}x{}".format(str(cs), str(cs))]
+        best_solvability = ["solvability best of {}x{}".format(str(cs), str(cs))]
+        worst_solvability = ["solvability worst of {}x{}".format(str(cs), str(cs))]
         yield random_solvability
         yield mean_solvability
         yield best_solvability
