@@ -296,7 +296,7 @@ class Grid:
 
             path = path + (get_loc,)
             get_loc = path_dict.get(get_loc)[0]
-        print(path[::-1])
+        # print(path[::-1])
         return path[::-1]
 
     def A_star(self, net):
@@ -367,7 +367,7 @@ class Grid:
         q.put((manh_d, 0, start_loc))
         visited = dict()
         visited[start_loc] = [start_loc, 0]
-        print("start_loc", start_loc)
+        # print("start_loc", start_loc)
         while not q.empty():
             count += 1
             k = q.get()
@@ -378,7 +378,7 @@ class Grid:
                 if neighbour.is_occupied():
                     if n_coord == end_loc:
                         visited[n_coord] = [current, steps]
-                        print("end_loc", end_loc)
+                        # print("end_loc", end_loc)
                         return self.extract_route(visited, n_coord), \
                                visited.get(end_loc)[1], count
                     else:
@@ -428,7 +428,7 @@ class Grid:
         paths = []
         for net in net_order:
             if self.max_g:
-                print("entering max g")
+                # print("entering max g")
                 path, length, ntries = self.A_star_max_g(net)
             else:
                 path, length, ntries = self.A_star(net)

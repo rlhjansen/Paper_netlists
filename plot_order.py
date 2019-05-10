@@ -132,12 +132,12 @@ def plot_circuit(paths, order, gates, x, y, select, save_name, title, resize=1, 
         ax.set_zticks(np.arange(0, mesh_fit + 1, 1.0))
         add_mesh(ax, mesh_fit+1, x, y)
     elif mesh_height=="full":
-        add_mesh(ax, 8, x, y)
+        add_mesh(ax, 7, x, y)
         ax.set_zticks(np.arange(0, 8, 1.0))
         ax.set_zlim(np.array([0, mesh_height+1]))
     elif isinstance(mesh_height, int):
         add_mesh(ax, mesh_height, x, y)
-        ax.set_zticks(np.arange(0, mesh_height + 1, 1.0))
+        ax.set_zticks(np.arange(0, mesh_height, 1))
     else:
         ax.set_zticks(np.arange(0, 1, 1.0))
 
@@ -233,30 +233,31 @@ def get_circuit_basics(circuit, order):
         paths =[path for path in paths if path != "remove"]
         build_paths = paths_to_buildcomp(paths)
     else:
-        paths = circuit.get_solution_placement(G.get_random_net_order())
+        paths = circuit.get_solution_placement(circuit.get_random_net_order())
         build_paths = paths_to_buildcomp(paths)
     _, g_coords = circuit.get_gate_coords()
     return g_coords, paths, build_paths
 
 
 
-
 def create_model(simple_obj, ord, title, select=False, save_name="net model", mesh_height=None):
     simple_obj.circuit.connect()
     circuit = simple_obj.circuit
-
+    if not ord:
+        ord = circuit.get_random_net_order()
     g_coords, paths, _ = get_circuit_basics(circuit, ord)
-    c_save_name = save_name + ",".join([str(x),str(n),str(nX)]) + ".png"
+    c_save_name = save_name + ",".join([str(e) for e in circuit.platform_params]) + ".png"
+    print(c_save_name)
     plot_circuit(paths, LONG_ORD, g_coords, simple_obj.x, simple_obj.y, select, c_save_name, title, resize=RESIZE, mesh_height=mesh_height)
 
 
-def create_base_model(simple_obj, title, select=False, save_name="bottom layer model.png"):
-    s = simple.SIMPLY(c, cX, n, nX, x, y, 'NEIN', iters=1, no_save=True)
-    s.circuit.connect()
+def create_base_model(simple_obj, title, select=False, save_name="bottom layer model.png", mesh_height=None):
+    simple_obj.circuit.connect()
     circuit = s.circuit
 
-    g_coords, paths, _ = get_circuit_basics(circuit, LONG_ORD)
-    plot_circuit([], [], g_coords, False, select, X, Y, save_name, title=title)
+    g_coords, _, _ = get_circuit_basics(circuit, "")
+    paths = []
+    plot_circuit([], [], g_coords, simple_obj.x, simple_obj.y, select, save_name, title=title, mesh_height=1)
 
 
 def create_model_gif(subdir, select=False, height=7, save_name="gif_model_parts", resize=1, redraw=False, del_after=False):
@@ -292,27 +293,28 @@ def create_model_gif(subdir, select=False, height=7, save_name="gif_model_parts"
 # create_model(s, LONG_ORD, "", select=True, save_name="bottom layer model.png")
 
 
-# c = 100
-# cX = 0
-# n = 80
-# nX = 14
-# x = 60
-# y = 60
-# LONG_ORD = "n27,n10,n40,n56,n31,n57,n71,n72,n23,n2,n53,n75,n39,n16,n78,n49,n12,n4,n61,n5,n20,n35,n63,n41,n50,n34,n37,n58,n51,n55,n38,n26,n67,n47,n65,n69,n66,n62,n64,n29,n25,n1,n60,n43,n28,n79,n8,n13,n0,n74,n33,n14,n19,n7,n76,n54,n70,n11,n3,n42,n68,n52,n30,n36,n24,n17,n21,n77,n9,n48,n15,n32,n46,n18,n6,n59,n44,n73,n22,n45".split(",")
-# s = simple.SIMPLY(c, cX, n, nX, x, y, 'NEIN', iters=1, no_save=True)
-# create_model(s, LONG_ORD, "", select=True, save_name="bottom layer model.png")
-
-
 c = 100
 cX = 0
-n = 20
+n = 40
 nX = 0
-x = 60
-y = 60
-LONG_ORD = "n4,n14,n17,n10,n9,n5,n13,n15,n16,n1,n2,n11,n12,n19,n6,n8,n7,n18,n0,n3".split(",")
+x = 30
+y = 30
+LONG_ORD = "n27,n10,n40,n56,n31,n57,n71,n72,n23,n2,n53,n75,n39,n16,n78,n49,n12,n4,n61,n5,n20,n35,n63,n41,n50,n34,n37,n58,n51,n55,n38,n26,n67,n47,n65,n69,n66,n62,n64,n29,n25,n1,n60,n43,n28,n79,n8,n13,n0,n74,n33,n14,n19,n7,n76,n54,n70,n11,n3,n42,n68,n52,n30,n36,n24,n17,n21,n77,n9,n48,n15,n32,n46,n18,n6,n59,n44,n73,n22,n45".split(",")
 s = simple.SIMPLY(c, cX, n, nX, x, y, 'NEIN', iters=1, no_save=True)
-create_model(s, LONG_ORD, "", select=True, save_name="bottom layer model.png", mesh_height="fitting")
+# create_model(s, "", "", mesh_height="fitting")
 
+
+# c = 100
+# cX = 0
+# n = 40
+# nX = 0
+# x = 30
+# y = 30
+# mesh_height = 8
+# LONG_ORD = "n4,n14,n17,n10,n9,n5,n13,n15,n16,n1,n2,n11,n12,n19,n6,n8,n7,n18,n0,n3".split(",")
+s = simple.SIMPLY(c, cX, n, nX, x, y, 'NEIN', iters=1, no_save=True)
+# create_model(s, LONG_ORD, "", mesh_height="fitting")
+create_base_model(s, "", save_name="bottom layer model.png", mesh_height="full")
 
 
 """ Selecting netlist, net order, circuit layout (gates) & other parameters
