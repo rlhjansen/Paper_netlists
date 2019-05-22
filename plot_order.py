@@ -112,7 +112,7 @@ def plot_circuit(paths, order, gates, x, y, select, save_name, title, resize=1, 
 
     #gates
     xgs, ygs, zgs = split_gates(gates)
-    s = ax.scatter3D(xgs, ygs, zgs, s=resize)
+    s = ax.scatter3D(xgs, ygs, zgs, s=resize*9, alpha=1)
 
     #s.set_edgecolors = s.set_facecolors = lambda *args: None
 
@@ -251,13 +251,13 @@ def create_model(simple_obj, ord, title, select=False, save_name="net model", me
     plot_circuit(paths, LONG_ORD, g_coords, simple_obj.x, simple_obj.y, select, c_save_name, title, resize=RESIZE, mesh_height=mesh_height)
 
 
-def create_base_model(simple_obj, title, select=False, save_name="bottom layer model.png", mesh_height=None):
+def create_base_model(simple_obj, title, select=False, save_name="bottom layer model.png", mesh_height=None, resize=1):
     simple_obj.circuit.connect()
     circuit = s.circuit
 
     g_coords, _, _ = get_circuit_basics(circuit, "")
     paths = []
-    plot_circuit([], [], g_coords, simple_obj.x, simple_obj.y, select, save_name, title=title, mesh_height=1)
+    plot_circuit([], [], g_coords, simple_obj.x, simple_obj.y, select, save_name, title=title, mesh_height=1, resize=resize)
 
 
 def create_model_gif(subdir, select=False, height=7, save_name="gif_model_parts", resize=1, redraw=False, del_after=False):
@@ -314,7 +314,7 @@ s = simple.SIMPLY(c, cX, n, nX, x, y, 'NEIN', iters=1, no_save=True)
 # LONG_ORD = "n4,n14,n17,n10,n9,n5,n13,n15,n16,n1,n2,n11,n12,n19,n6,n8,n7,n18,n0,n3".split(",")
 s = simple.SIMPLY(c, cX, n, nX, x, y, 'NEIN', iters=1, no_save=True)
 # create_model(s, LONG_ORD, "", mesh_height="fitting")
-create_base_model(s, "", save_name="bottom layer model.png", mesh_height="full")
+create_base_model(s, "", save_name="bottom layer model.png", mesh_height="full", resize=5)
 
 
 """ Selecting netlist, net order, circuit layout (gates) & other parameters

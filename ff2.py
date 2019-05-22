@@ -35,20 +35,20 @@ def named_function(name):
         return func
     return naming
 
-def format_chipsize(chipsize):
-    return str(chipsize)+"x"+str(chipsize)
+def format_meshsize(meshsize):
+    return str(meshsize)+"x"+str(meshsize)
 
-def arb_solv_str(chipsize):
-    return "solvability by arb {}x{}".format(str(chipsize), str(chipsize))
+def arb_solv_str(meshsize):
+    return "routability by arb {}x{}".format(str(meshsize), str(meshsize))
 
-def best_solv_str(chipsize):
-    return "solvability best of {}x{}".format(str(chipsize), str(chipsize))
+def best_solv_str(meshsize):
+    return "routability best of {}x{}".format(str(meshsize), str(meshsize))
 
-def worst_solv_str(chipsize):
-    return "solvability worst of {}x{}".format(str(chipsize), str(chipsize))
+def worst_solv_str(meshsize):
+    return "routability worst of {}x{}".format(str(meshsize), str(meshsize))
 
-def mean_solv_str(chipsize):
-    return "solvability of mean {}x{}".format(chipsize, chipsize)
+def mean_solv_str(meshsize):
+    return "routability of mean {}x{}".format(meshsize, meshsize)
 
 @named_function("unbalanced sigmoid")
 @written_math("e^{-e^{(2 \cdot (nl - shift) * slope)}}")
@@ -78,28 +78,29 @@ def determine_3x3_x(elem_n):
 
 
 
-def save_ab(chipsizes, fitfunc):
-    datafile = "compare_solvability_best_of_200.csv"
+def save_ab(meshsizes, param_func):
+    fitfunc = eval(param_func)
+    datafile = "compare_routability_best_of_200.csv"
     df = pd.read_csv(datafile, index_col="netlist length")
     nl = np.array(df.index.values.tolist())
 
-    param_csv = open("params.csv", "w+")
-    param_csv.write(", arbitrary netlists,,mean solvability,,optimized netlist order,,worst order,\n")
-    param_csv.write("chipsize (XxZ),arb_a,arb_b,mean_a,mean_b,best_a,best_b,worst_a,worst_b\n")
-    for j, chipsize in enumerate(chipsizes):
+    param_csv = open("params_" + param_func + ".csv", "w+")
+    param_csv.write(", arbitrary netlists,,mean routability,,optimized netlist order,,worst order,\n")
+    param_csv.write("meshsize (XxZ),arb_a,arb_b,mean_a,mean_b,best_a,best_b,worst_a,worst_b\n")
+    for j, meshsize in enumerate(meshsizes):
 
-        y_arb = df[arb_solv_str(chipsize)]
+        y_arb = df[arb_solv_str(meshsize)]
         popt, pcov = ABNLfit(nl, y_arb, fit_col, fitfunc, plot=False)
 
-        y_mean = df[mean_solv_str(chipsize)]
+        y_mean = df[mean_solv_str(meshsize)]
         poptm, pcov = ABNLfit(nl, y_mean, fit_col, fitfunc,plot=False)
 
-        y_best = df[best_solv_str(chipsize)]
+        y_best = df[best_solv_str(meshsize)]
         poptb, pcov = ABNLfit(nl, y_best, fit_col,fitfunc, plot=False)
 
-        y_worst = df[worst_solv_str(chipsize)]
+        y_worst = df[worst_solv_str(meshsize)]
         poptw, pcov = ABNLfit(nl, y_worst, fit_col, fitfunc,plot=False)
-        param_csv.write(",".join([str(chipsize)]+lstr(popt)+lstr(poptm)+lstr(poptb)+lstr(poptw))+"\n")
+        param_csv.write(",".join([str(meshsize)]+lstr(popt)+lstr(poptm)+lstr(poptb)+lstr(poptw))+"\n")
 
 
 def conditional_label(boolean_value, label):
@@ -108,12 +109,23 @@ def conditional_label(boolean_value, label):
     else:
         return None
 
+def gen_filename_window(param_func, types, scatter, fitted):
+    plot_savefile = param_func + "/" + "_".join(types)
+    if scatter:
+        plot_savefile += "_s"
+    if fitted:
+        plot_savefile += "_f"
+    plot_savefile += "_3x3.png"
+    return plot_savefile
 
-def plot_alpha_beta(chipsizes, types, fitfunc, title, plot_savefile, scatter=True, fitted=True):
-    datafile = "compare_solvability_best_of_200.csv"
+def plot_alpha_beta(meshsizes, types, param_func, title, scatter=True, fitted=True):
+    fitfunc = eval(param_func)
+    plot_savefile = gen_filename_window(param_func, types, scatter, fitted)
+
+    datafile = "compare_routability_best_of_200.csv"
     df = pd.read_csv(datafile, index_col="netlist length")
     nl = np.array(df.index.values.tolist())
-    ab_df = load_ab()
+    ab_df = load_ab(param_func)
 
     params_r = []
     params_b = []
@@ -127,10 +139,10 @@ def plot_alpha_beta(chipsizes, types, fitfunc, title, plot_savefile, scatter=Tru
     fig=plt.figure(figsize=(12,7))
     fig.suptitle('effect of permutation on predicted solavability') # or plt.suptitle('Main title')
     legend_loc = 5
-    for j, cs in enumerate(chipsizes):
+    for j, cs in enumerate(meshsizes):
         print((1+j+j//4)//4, (j+j//3)%4)
         ax = plt.subplot2grid((3, 4), ((1+j+j//4)//4, (j+j//3)%4))
-        ax.set_title(format_chipsize(cs))
+        ax.set_title(format_meshsize(cs))
         y_arb = df[arb_solv_str(cs)]
         if not determine_3x3_x(j):
             ax.set_xticks([])
@@ -141,7 +153,7 @@ def plot_alpha_beta(chipsizes, types, fitfunc, title, plot_savefile, scatter=Tru
         if not determine_3x3_y(j):
             ax.set_yticks([])
         if determine_3x3_solv(j):
-            ax.set_ylabel("solvability %")
+            ax.set_ylabel("routability %")
 
         labelwindow = j==legend_loc
 
@@ -149,47 +161,41 @@ def plot_alpha_beta(chipsizes, types, fitfunc, title, plot_savefile, scatter=Tru
             y_arb = df[arb_solv_str(cs)]
             popta = ab_df["arb_a"][j], ab_df["arb_b"][j]
             if scatter:
-                plotscatter(nl, y_arb, c=arb_col, s=6, label=conditional_label(labelwindow, "arbitrary case"))
+                plotscatter(nl, y_arb, c=arb_col, s=6, label=conditional_label(labelwindow, "routability of arbitrary sequence"))
             if fitted:
-                ABNL_plot(nl, popta, fitfunc, c=fit_col, label=conditional_label(labelwindow, "predicted arbitrary \n case"))
+                ABNL_plot(nl, popta, fitfunc, c=fit_col, label=conditional_label(labelwindow, "predicted routability of arbitrary sequence"))
 
         if _mean:
             y_mean = df[mean_solv_str(cs)]
             poptm = ab_df["mean_a"][j], ab_df["mean_b"][j]
             if scatter:
-                plotscatter(nl, y_mean, c=mean_col, s=6, label=conditional_label(labelwindow, "permutated average \n case"))
+                plotscatter(nl, y_mean, c=mean_col, s=6, label=conditional_label(labelwindow, "average sequence routability"))
             if fitted:
-                ABNL_plot(nl, poptm, fitfunc, c=fit_col, label=conditional_label(labelwindow, "predicted average \n case"))
+                ABNL_plot(nl, poptm, fitfunc, c=fit_col, label=conditional_label(labelwindow, "predicted average sequence routability"))
 
         if _best:
             y_best = df[best_solv_str(cs)]
             poptb = ab_df["best_a"][j], ab_df["best_b"][j]
             if scatter:
-                plotscatter(nl, y_best, c=best_col, s=6, label=conditional_label(labelwindow, "permutated best case"))
+                plotscatter(nl, y_best, c=best_col, s=6, label=conditional_label(labelwindow, "routability after permutation"))
             if fitted:
-                ABNL_plot(nl, poptb, fitfunc, c=best_fit, label=conditional_label(labelwindow, "predicted permutated \n best case"))
+                ABNL_plot(nl, poptb, fitfunc, c=best_fit, label=conditional_label(labelwindow, "predicted routability after permutation"))
 
-        if _worst:
-            y_worst = df[worst_solv_str(cs)]
-            poptw = ab_df["worst_a"][j], ab_df["worst_b"][j]
-            if scatter:
-                plotscatter(nl, y_worst, c=worst_col, s=6, label=conditional_label(labelwindow, "permutated worst case"))
-            if fitted:
-                ABNL_plot(nl, poptw, fitfunc, c=fit_col, plot=plotfit, label=conditional_label(labelwindow, "predicted permutated \n worst case"))
 
         if labelwindow:
             # Put a legend to the right of the current axis
             lgd = plt.legend(bbox_to_anchor=(1, 1.0))
-    # plt.suptitle("solvability for different chipsizes")
+    # plt.suptitle("routability for different meshsizes")
     plt.suptitle(title)
     plt.savefig(plot_savefile, bbox_extra_artists=(lgd,))
     plt.show()
 
 
-def plot_fits(types_of_fit, suptitle, fitfunc, cs="all", scatter=False):
+def plot_fits(types_of_fit, suptitle, param_func, cs="all", scatter=False):
+    fitfunc = eval(param_func)
     bbox_tuple = (1.05, -0.3, 1.0, 1.0)
-    ab_df = load_ab()
-    datafile = "compare_solvability_best_of_200.csv"
+    ab_df = load_ab(param_func)
+    datafile = "compare_routability_best_of_200.csv"
     df = pd.read_csv(datafile, index_col="netlist length")
     nl = np.array(df.index.values.tolist())
 
@@ -220,7 +226,7 @@ def plot_fits(types_of_fit, suptitle, fitfunc, cs="all", scatter=False):
         p.set_ylabel("routability %")
         p.legend(loc="upper left", bbox_to_anchor=bbox_tuple)
 
-    # plt.suptitle("predicted solvability for differently sized chips\n\n")
+    # plt.suptitle("predicted routability for differently sized chips\n\n")
     p = plt.subplot(type_count+2,1,3)
     fitted_vals = [1 - (1 - fitfunc(nl, ab_df['mean'+'_a'][size], ab_df['mean'+'_b'][size]))**200 for size in sizes]
 
@@ -254,15 +260,16 @@ def plot_fits(types_of_fit, suptitle, fitfunc, cs="all", scatter=False):
     plt.suptitle(suptitle)
     p.set_xlabel("netlist length")
 
-    plt.savefig("predicted_chipsize_compare.png")
+    plt.savefig("predicted_meshsize_compare.png")
     plt.show()
 
 
 
-def compare_expected_best(fitfunc):
+def compare_expected_best(param_func):
+    fitfunc = eval(param_func)
     ["best", "mean"]
-    ab_df = load_ab()
-    datafile = "compare_solvability_best_of_200.csv"
+    ab_df = load_ab(param_func)
+    datafile = "compare_routability_best_of_200.csv"
     df = pd.read_csv(datafile, index_col="netlist length")
     nl = np.array(df.index.values.tolist())
 
@@ -288,17 +295,18 @@ def compare_expected_best(fitfunc):
     p.set_ylabel("routability %")
     p.legend(loc="upper left", bbox_to_anchor=(1.05, 0.8, 1.0, 1.0))
 
-    # plt.suptitle("predicted solvability for differently sized chips\n\n")
+    # plt.suptitle("predicted routability for differently sized chips\n\n")
     plt.suptitle("compare expected best vs real best")
     p.set_xlabel("netlist length")
 
-    plt.savefig("predicted_chipsize_compare.png")
+    plt.savefig("predicted_meshsize_compare.png")
     plt.show()
 
 
-def plot_fits_dif(t1, t2, fitfunc, suptitle):
-    ab_df = load_ab()
-    datafile = "compare_solvability_best_of_200.csv"
+def plot_fits_dif(t1, t2, param_func, suptitle):
+    fitfunc = eval(param_func)
+    ab_df = load_ab(param_func)
+    datafile = "compare_routability_best_of_200.csv"
     df = pd.read_csv(datafile, index_col="netlist length")
     nl = df.index.values.tolist()
 
@@ -316,21 +324,18 @@ def plot_fits_dif(t1, t2, fitfunc, suptitle):
     p.scatter([nl[v] for v in fit_difs_maxs], [fit_difs[i][v] for i, v in enumerate(fit_difs_maxs)])
     p.scatter([nl[v] for v in fit_difs_maxs], [1 for i, v in enumerate(fit_difs_maxs)])
 
-    # plt.suptitle("predicted solvability for differently sized chips\n\n")
+    # plt.suptitle("predicted routability for differently sized chips\n\n")
     plt.suptitle(suptitle)
     p.set_xlabel("netlist length")
 
-    plt.savefig("predicted_chipsize_compare.png")
+    plt.savefig("predicted_meshsize_compare.png")
     plt.show()
 
 
 def scatter_routability(types_of_scatter, cs, end=False, title=None, savename=None, print_options=True):
-
     if end and not savename:
         raise ValueError(cannot)
-    datafile = "compare_solvability_best_of_200.csv"
-    df = pd.read_csv(datafile)
-    nl = df.index.values.tolist()
+    _, df, _, nl = get_plot_necessities(param_func)
     plt.figure(figsize=(7,7))
     type_count = len(types_of_scatter) + 1
     for i, t in enumerate(types_of_scatter):
@@ -351,21 +356,21 @@ def scatter_routability(types_of_scatter, cs, end=False, title=None, savename=No
 
     if end:
         if title:
-            plt.title("solvability of arbitrary netlists on a "+format_chipsize(cs) + " chip")
+            plt.title("routability of arbitrary netlists on a "+format_meshsize(cs) + " chip")
         p.set_xlabel("netlist length")
         plt.legend()
         plt.savefig(savename)
-        # plt.savefig("arbitrary_case_"+format_chipsize(cs)+".png")
+        # plt.savefig("arbitrary_sequence_"+format_meshsize(cs)+".png")
         plt.show()
 
 
-def fit_ab(chipsizes, _arb=False, _mean=False, _best=False, _worst=False):
-    df = load_ab()
-    if chipsizes == "area":
-        chipsize_col = getdfcol(df,0)**2
-    elif chipsizes == "edge_size":
-        chipsize_col = getdfcol(df,0)
-    interp_chip = [i for i in range(min(chipsize_col), max(chipsize_col), 1)]
+def fit_ab(meshsizes, param_func, _arb=False, _mean=False, _best=False, _worst=False):
+    df = load_ab(param_func)
+    if meshsizes == "area":
+        meshsize_col = getdfcol(df,0)**2
+    elif meshsizes == "edge_size":
+        meshsize_col = getdfcol(df,0)
+    interp_chip = [i for i in range(min(meshsize_col), max(meshsize_col), 1)]
     arbitrary_alpha = getdfcol(df,1)
     best_alpha = getdfcol(df,5)
     mean_alpha = getdfcol(df,3)
@@ -373,33 +378,33 @@ def fit_ab(chipsizes, _arb=False, _mean=False, _best=False, _worst=False):
     p = plt.subplot(111)
 
     if _arb:
-        plotscatter(chipsize_col, arbitrary_alpha, c=arb_col, label='real alpha arbitrary')
-        aapopt, pcov = curve_fit(logfunc, chipsize_col, arbitrary_alpha, p0=(13, 0.05, 10), bounds=([-30000, 0.0001, -max(chipsize_col)], [40000, 0.9, max(chipsize_col)]))
+        plt.scatter(meshsize_col, arbitrary_alpha, c=arb_col, label='real alpha arbitrary')
+        aapopt, pcov = curve_fit(logfunc, meshsize_col, arbitrary_alpha, p0=(13, 0.05, 10), bounds=([-30000, 0.0001, -max(meshsize_col)], [40000, 0.9, max(meshsize_col)]))
         print("alpha arbitrary", aapopt)
-        p.plot(interp_chip, logfunc(interp_chip, *aapopt), c=fit_col, label="predicted \n arbitrary case", linestyle="--")
+        p.plot(interp_chip, logfunc(interp_chip, *aapopt), c=fit_col, label="predicted \n arbitrary sequence", linestyle="--")
 
     if _best:
-        plotscatter(chipsize_col, best_alpha, c=best_col, label='real alpha best')
-        abpopt, pcov = curve_fit(logfunc, chipsize_col, best_alpha, p0=(13, 0.05, 10), bounds=([-30000, 0.0001, -max(chipsize_col)], [40000, 0.9, max(chipsize_col)]))
+        plt.scatter(meshsize_col, best_alpha, c=best_col, label='real alpha best')
+        abpopt, pcov = curve_fit(logfunc, meshsize_col, best_alpha, p0=(13, 0.05, 10), bounds=([-30000, 0.0001, -max(meshsize_col)], [40000, 0.9, max(meshsize_col)]))
         print("alpha best", abpopt)
-        p.plot(interp_chip, logfunc(interp_chip, *abpopt), c=best_fit, label="predicted \n best case", linestyle="--")
+        p.plot(interp_chip, logfunc(interp_chip, *abpopt), c=best_fit, label="predicted \n best sequence", linestyle="--")
 
     if _mean:
-        plotscatter(chipsize_col, mean_alpha, c=mean_col, label='real alpha mean')
-        ampopt, pcov = curve_fit(logfunc, chipsize_col, mean_alpha, p0=(13, 0.05, 10), bounds=([-30000, 0.0001, -max(chipsize_col)], [40000, 0.9, max(chipsize_col)]))
+        plt.scatter(meshsize_col, mean_alpha, c=mean_col, label='real alpha mean')
+        ampopt, pcov = curve_fit(logfunc, meshsize_col, mean_alpha, p0=(13, 0.05, 10), bounds=([-30000, 0.0001, -max(meshsize_col)], [40000, 0.9, max(meshsize_col)]))
         print("alpha mean", ampopt)
-        p.plot(interp_chip, logfunc(interp_chip, *ampopt), c=fit_col, label="predicted \n average case", linestyle='--')
+        p.plot(interp_chip, logfunc(interp_chip, *ampopt), c=fit_col, label="predicted \n average sequence", linestyle='--')
 
     if _worst:
-        plotscatter(chipsize_col, worst_alpha, c=worst_col, label='real alpha worst')
-        awpopt, pcov = curve_fit(logfunc, chipsize_col, worst_alpha, p0=(13, 0.05, 10), bounds=([-30000, 0.0001, -max(chipsize_col)], [40000, 0.9, max(chipsize_col)]))
+        pl.tscatter(meshsize_col, worst_alpha, c=worst_col, label='real alpha worst')
+        awpopt, pcov = curve_fit(logfunc, meshsize_col, worst_alpha, p0=(13, 0.05, 10), bounds=([-30000, 0.0001, -max(meshsize_col)], [40000, 0.9, max(meshsize_col)]))
         print("alpha worst", awpopt)
-        p.plot(interp_chip, logfunc(interp_chip, *awpopt), c=fit_col, label="predicted \n worst case", linestyle='--')
+        p.plot(interp_chip, logfunc(interp_chip, *awpopt), c=fit_col, label="predicted \n worst sequence", linestyle='--')
 
-    p.set_xlabel("chipsize")
-    plt.title("parametrization of alpha for average and best case solvability by "+" ".join(chipsizes.split("_")))
+    p.set_xlabel("meshsize")
+    plt.title("parametrization of alpha for average and best sequence routability by "+" ".join(meshsizes.split("_")))
     plt.legend()
-    plt.savefig("alpha_param_chipsize_"+chipsizes+".png")
+    plt.savefig("alpha_param_meshsize_"+meshsizes+".png")
     plt.show()
     plt.clf()
 
@@ -409,43 +414,43 @@ def fit_ab(chipsizes, _arb=False, _mean=False, _best=False, _worst=False):
     worst_beta = getdfcol(df,8)
     p = plt.subplot(111)
     if _arb:
-        plotscatter(chipsize_col, arbitrary_beta, c=arb_col, label='real arbitrary case')
-        bapopt, pcov = curve_fit(logfunc, chipsize_col, arbitrary_beta, p0=(13, 0.005, 10), bounds=([-40, -0.5, -40000], [300, 0.5, 10000]))
+        plt.scatter(meshsize_col, arbitrary_beta, c=arb_col, label='real arbitrary sequence')
+        bapopt, pcov = curve_fit(logfunc, meshsize_col, arbitrary_beta, p0=(13, 0.005, 10), bounds=([-40, -0.5, -40000], [300, 0.5, 10000]))
         print("beta arbitrary", bapopt)
         p.plot(interp_chip, logfunc(interp_chip, *bapopt), c=fit_col, label="predicted beta arbitrary", linestyle="--")
 
     if _best:
-        plotscatter(chipsize_col, best_beta, c=best_col, label='real best case')
-        bbpopt, pcov = curve_fit(logfunc, chipsize_col, best_beta, p0=(13, 0.005, 10), bounds=([-40, -0.5, -400], [300, 0.5, 10000]))
+        plt.scatter(meshsize_col, best_beta, c=best_col, label='real best sequence')
+        bbpopt, pcov = curve_fit(logfunc, meshsize_col, best_beta, p0=(13, 0.005, 10), bounds=([-40, -0.5, -400], [300, 0.5, 10000]))
         print("beta best", bbpopt)
         p.plot(interp_chip, logfunc(interp_chip, *bbpopt), c=best_fit,  label="predicted beta best", linestyle="--")
 
     if _mean:
-        plotscatter(chipsize_col, mean_beta, c=mean_col, label='real mean case')
-        bapopt, pcov = curve_fit(logfunc, chipsize_col, mean_beta, p0=(13, 0.005, 10), bounds=([-40, -0.5, -400], [300, 2, 10000]))
+        plt.scatter(meshsize_col, mean_beta, c=mean_col, label='real mean sequence')
+        bapopt, pcov = curve_fit(logfunc, meshsize_col, mean_beta, p0=(13, 0.005, 10), bounds=([-40, -0.5, -400], [300, 2, 10000]))
         print("beta arbitrary", bapopt)
         p.plot(interp_chip, logfunc(interp_chip, *bapopt), c=fit_col, label="predicted beta arbitrary", linestyle="--")
 
     if _worst:
-        plotscatter(chipsize_col, worst_beta, c=worst_col, label='real worst case')
-        bbpopt, pcov = curve_fit(logfunc, chipsize_col, worst_beta, p0=(13, 0.005, 10), bounds=([-40, -0.5, -400], [300, 2, 10000]))
+        plt.scatter(meshsize_col, worst_beta, c=worst_col, label='real worst sequence')
+        bbpopt, pcov = curve_fit(logfunc, meshsize_col, worst_beta, p0=(13, 0.005, 10), bounds=([-40, -0.5, -400], [300, 2, 10000]))
         print("beta best", bbpopt)
         p.plot(interp_chip, logfunc(interp_chip, *bbpopt), c=fit_col,  label="predicted beta worst", linestyle='--')
 
-    p.set_xlabel("chipsize")
-    plt.title("parametrization of beta for average and best case solvability by " + chipsizes)
+    p.set_xlabel("meshsize")
+    plt.title("parametrization of slope for arbitrary and best sequence routability by " + meshsizes)
     plt.legend()
-    plt.savefig("beta_param_chipsize_" + chipsizes + ".png")
+    plt.savefig("beta_param_meshsize_" + meshsizes + ".png")
     plt.show()
 
 
-def plotscatter(nl, solvability, c, label=None, alpha=0.4, s=30):
-    scatter_percent_wrapper(nl, solvability, c=c, label=label, alpha=alpha, s=s)
+def plotscatter(nl, routability, c, label=None, alpha=0.4, s=30):
+    scatter_percent_wrapper(nl, routability, c=c, label=label, alpha=alpha, s=s)
 
 
-def ABNLfit(nl, solvability, c, fitfunc, label=None, plot=False):
-    popt, pcov = curve_fit(fitfunc, nl, solvability, p0=(40, 0.05), bounds=([-100, -2], [200, 1]))
-    # popt, pcov = curve_fit(fitfunc, nl, solvability, p0=(0.05, 0.05), bounds=([-1e6, 1e-5], [1e6, 1]))
+def ABNLfit(nl, routability, c, fitfunc, label=None, plot=False):
+    popt, pcov = curve_fit(fitfunc, nl, routability, p0=(40, 0.05), bounds=([-100, -2], [200, 1]))
+    # popt, pcov = curve_fit(fitfunc, nl, routability, p0=(0.05, 0.05), bounds=([-1e6, 1e-5], [1e6, 1]))
     return popt, pcov
 
 def ABNL_plot(nl, popts, fitfunc, c, label=None, perc=True):
@@ -468,56 +473,48 @@ def lprint(iterable):
     for elem in iterable:
         print(elem)
 
-def load_ab(_print=False):
-    df = pd.read_csv("params.csv", header=1)
+def load_ab(param_func, _print=False):
+    df = pd.read_csv("params_" + param_func + ".csv", header=1)
     if _print:
         print(df.head())
         lprint(df.columns)
     return df
-
-def dfcprint(df, c):
-    print(df.columns[c])
-    print(getdfcol(df,c))
 
 @written_math("-const1 * natural log( const2 * (value - const3))")
 def logfunc(value, const1, const2, const3):
     return  -const1*np.log(const2* (value-const3))
 
 
-def getdfcol(df, c):
-    """ get c'th column values of dataframe
+def getdfcol(df, n):
+    """ get n'th column values of dataframe
     """
-    return df[df.columns[c]]
+    return df[df.columns[n]]
 
 
-def plot_residuals(types_of_scatter, cs, fitfunc, end=False, title=None, savename=None, print_options=True):
-    # if isinstance(cs, int):
-    #     cs = [cs]
+def plot_residuals(types_of_scatter, mesh_size, param_func, end=False, title=None, savename=None, print_options=True):
     if end and not savename:
-        raise ValueError(cannot)
-    datafile = "compare_solvability_best_of_200.csv"
-    df = pd.read_csv(datafile)
-    ab_df = load_ab()
-    nl = [10 + e for e in df.index.values.tolist()]
+        raise ValueError("cannot")
+
+    fitfunc, df, ab_df, nl = get_plot_necessities(param_func)
     type_count = len(types_of_scatter) + 1
-    cor_cs = int(cs/10-2)
+    cor_cs = int(mesh_size/10-2)
     fig, axs = plt.subplots(2, 3)
     fig.set_figheight(15)
     fig.set_figwidth(15)
     for i, t in enumerate(types_of_scatter):
         fitted_val = np.array(fitfunc(nl, ab_df[t+'_a'][cor_cs], ab_df[t+'_b'][cor_cs]))
-        y = df[eval(t+"_solv_str")(cs)]
+        y = df[eval(t+"_solv_str")(mesh_size)]
 
         axs[i,0].scatter(nl, y*100, c=eval(t+"_col"), label=t, alpha=0.4)
         axs[i,0].plot(nl, fitted_val, c=eval(t+"_col"), label=t, alpha=0.4)
         axs[i,0].set_ylabel("% routability")
-        axs[i,0].set_title("routability for " + str(t) + " on size " + str(cs))
+        axs[i,0].set_title("routability for " + str(t) + " on size " + str(mesh_size))
         axs[i,0].legend()
 
         residual = (fitted_val - y)*100
         axs[i,1].scatter(nl, residual, label=t, alpha=0.4, c=eval(t+"_col"))
         axs[i,1].set_ylabel("% deviation from fit")
-        axs[i,1].set_title("residual when fitting for " + str(t) + " on size " + str(cs))
+        axs[i,1].set_title("residual when fitting for " + str(t) + " on size " + str(mesh_size))
         axs[i,1].legend()
 
         rel_residual = [elem for elem in residual if abs(elem) > 0.1]
@@ -525,35 +522,72 @@ def plot_residuals(types_of_scatter, cs, fitfunc, end=False, title=None, savenam
         print(rel_count)
         axs[i,2].hist(rel_residual, label=t, color=eval(t+"_col"), bins=max([10, int(rel_count/3)]))
         axs[i,2].set_ylabel("occurances")
-        axs[i,2].set_title("distribution of " + str(rel_count) + "relevant resduals for " + str(t) + " on size " + str(cs))
+        axs[i,2].set_title("distribution of " + str(rel_count) + "relevant resduals for " + str(t) + " on size " + str(mesh_size) + \
+            "total residual " + str(sum([abs(e) for e in residual])) + \
+              "\naverage deviation" + str(round(sum([abs(e) for e in residual])/len(residual),2)) + \
+              "\nvariance " + str(sum([(e - mean(residual))**2 for e in residual])/len(residual)) + \
+              "\nlikelyhood " + str(log_likelyhood_model(param_func, t, cs)))
         axs[i,2].legend()
-    res_sum_str = "total " + str(sum([abs(e) for e in residual])) + \
-                  "\naverage deviation" + str(round(sum([abs(e) for e in residual])/len(residual),2)) + \
-                  "\nvariance " + str(sum([(e - mean(residual))**2 for e in residual])/len(residual))
-    fig.suptitle("analysed fit for " + fitfunc.name + ": " + fitfunc.math_expr + "\n" + res_sum_str)
-    plt.savefig("residuals " + fitfunc.name + "/residual_comparison_"+str(cs)+".png")
+    fig.suptitle("analysed fit for " + fitfunc.name + ": " + fitfunc.math_expr + "\n")
+    plt.savefig(param_func + "/" + param_func + " residual_comparison_"+str(cs)+".png")
+
+
+def get_plot_necessities(param_func):
+    fitfunc = eval(param_func)
+    df = pd.read_csv("compare_routability_best_of_200.csv")
+    ab_df = load_ab(param_func)
+    nl = [10 + e for e in df.index.values.tolist()]
+    return fitfunc, df, ab_df, nl
+
+
+def log_likelyhood_model(param_func, modeltype, mesh_size):
+    """ calculates the likelyhood of a model given the basic function type for a
+
+    given parametrization function, mesh size and modeltype.
+
+    :param param_func: string:
+        expfunc - unbalanced sigmoid
+        regular_logistic - balanced sigmoid
+    :param modeltype: string:
+        best
+        mean
+        worst
+        arb - arbitrary
+
+    :returns: float, likelyhood of model
+    """
+    fitfunc, df, ab_df, nl = get_plot_necessities(param_func)
+    cor_mesh_size = int(mesh_size/10-2)
+    fitted_val = np.array(fitfunc(nl, ab_df[modeltype+'_a'][cor_mesh_size], ab_df[modeltype+'_b'][cor_mesh_size]))
+    data = df[eval(modeltype+"_solv_str")(cs)]
+    likelyhood_for_n = fitted_val**data*(1-fitted_val)**(1-data)
+    tot_log_likelyhood = np.sum(np.log(likelyhood_for_n))
+    return tot_log_likelyhood
 
 
 
 
 
 if __name__ == '__main__':
-    # fitfunc = regular_logistic
-    fitfunc = expfunc
-    # save_ab([(i+2)*10 for i in range(9)], fitfunc)
-    # _arb = True
-    _mean = True
+    # param_func = "regular_logistic"
+    # save_ab([(i+2)*10 for i in range(9)], param_func)
+    # param_func = "expfunc"
+    # save_ab([(i+2)*10 for i in range(9)], param_func)
+    _arb = True
+    _mean = False
     _best = True
-    # _worst = True
+    _worst = False
+    fitfunc_names = ["regular_logistic", "expfunc"]
     cs = 80
-    chipsizes = [(i+2)*10 for i in range(9)]
-    # scatter_routability(["mean", "best"], cs, end=True, savename="k.png")
-    # plot_fits(["mean", "best"],"" ,fitfunc, cs=cs, scatter=True)
-    # plot_fits_dif("best", "mean", fitfunc, "difference best and mean")
-    # fit_ab("area", _arb=_arb, _mean=_mean, _best=_best, _worst=_worst)
-    # fit_ab("edge_size", _arb=_arb, _mean=_mean, _best=_best, _worst=_worst)
-    # compare_expected_best(fitfunc)
-    plot_alpha_beta(chipsizes, ["mean"],fitfunc, "", "mean_3x3_scatter.png")
-    # plot_alpha_beta(chipsizes, ["mean", "best"],fitfunc, "", "mean_best_3x3_fitted.png", scatter=False)
-    # for cs in chipsizes:
-        #     plot_residuals(["mean", "best"], cs, fitfunc, end=True, savename="k.png")
+    meshsizes = [(i+2)*10 for i in range(9)]
+    for param_func in fitfunc_names:
+        scatter_routability(["arb", "best"], cs, end=True, savename="k.png")
+        plot_fits(["arb", "best"],"" ,param_func, cs=cs, scatter=True)
+        plot_fits_dif("best", "arb", param_func, "difference best and mean")
+        fit_ab("area", param_func, _arb=_arb, _mean=_mean, _best=_best, _worst=_worst)
+        fit_ab("edge_size", param_func, _arb=_arb, _mean=_mean, _best=_best, _worst=_worst)
+        compare_expected_best(param_func)
+        plot_alpha_beta(meshsizes, ["arb"], param_func, "")
+        plot_alpha_beta(meshsizes, ["arb", "best"], param_func, "", scatter=False)
+        for cs in meshsizes:
+            plot_residuals(["mean", "best"], cs, param_func, end=True, savename="k.png")

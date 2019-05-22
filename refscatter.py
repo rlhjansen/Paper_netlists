@@ -32,9 +32,13 @@ def reorder_by_netlength(files, lengths, iters, chipsize):
         # print(i)
         # print(f[f_c_start:f_c_start+1])
         fcheck = f[48+2*len(str(chipsize))+len(str(iters)):48+2*len(str(chipsize))+len(strk)+len(str(iters))]
-        netlendict[k]["Ns"].append("N" + str(k) + "_" + str(i))
-        netlendict[k]["Cs"].append("C100" + "_" + f[f_c_start:f_c_start+1])
-        netlendict[k]["filenames"].append(f)
+        try:
+            netlendict[k]["Ns"].append("N" + str(k) + "_" + str(i))
+            netlendict[k]["Cs"].append("C100" + "_" + f[f_c_start:f_c_start+1])
+            netlendict[k]["filenames"].append(f)
+        except:
+            lprint(netlendict.keys())
+            raise ValueError("lel")
     return netlendict
 
 

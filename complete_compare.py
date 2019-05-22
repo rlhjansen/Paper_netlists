@@ -610,7 +610,7 @@ def make_solvability_csvs(chipsizes, best_of_N):
         csv_data_walk[j+2].extend([str(mean(netlen_solvabilitydict[n]['mc'])) for n in netlengths])
         csv_data_walk[j+3].extend([str(mean(netlen_solvabilitydict[n]['bc'])) for n in netlengths])
         csv_data_walk[j+4].extend([str(mean(netlen_solvabilitydict[n]['minc'])) for n in netlengths])
-    with open("compare_solvability_best_of_"+str(best_of_N)+".csv", "w+") as inf:
+    with open("compare_routability_best_of_"+str(best_of_N)+".csv", "w+") as inf:
         for i, netlength in enumerate(csv_data_walk[0]):
             line = ",".join([csv_data_walk[j][i] for j in range(dw_len)]) + "\n"
             inf.write(line)
