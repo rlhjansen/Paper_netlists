@@ -478,8 +478,8 @@ def make_percent_placement_plots(netlengths, netlen_countdict, squaresize, direc
     plt.savefig(new_fname)
     plt.clf()
 
-def make_netlen_solvabilitydict(files, netlengths, netlendict, chipsize, iters):
-    netlen_solvabilitydict = {k:{'f':[], 'bc':[], 'mc':[], 'minc':[]} for k in netlengths}
+def make_netlen_routabilitydict(files, netlengths, netlendict, chipsize, iters):
+    netlen_routabilitydict = {k:{'f':[], 'bc':[], 'mc':[], 'minc':[]} for k in netlengths}
     for k in netlendict:
         strk = str(k) + os.sep
 
@@ -490,34 +490,34 @@ def make_netlen_solvabilitydict(files, netlengths, netlendict, chipsize, iters):
                 best_count = get_max_placed_count(f)
                 mean_count = get_mean_placed_count(f, k)
                 min_count = get_min_placed_count(f)
-                netlen_solvabilitydict[k]['f'].append(1 if firstcount == k else 0)
-                netlen_solvabilitydict[k]['mc'].append(mean_count)
-                netlen_solvabilitydict[k]['bc'].append(1 if best_count == k else 0)
-                netlen_solvabilitydict[k]['minc'].append(1 if min_count == k else 0)
-    return netlen_solvabilitydict
+                netlen_routabilitydict[k]['f'].append(1 if firstcount == k else 0)
+                netlen_routabilitydict[k]['mc'].append(mean_count)
+                netlen_routabilitydict[k]['bc'].append(1 if best_count == k else 0)
+                netlen_routabilitydict[k]['minc'].append(1 if min_count == k else 0)
+    return netlen_routabilitydict
 
 
-def make_solvability_plots(netlengths, solvabilitydict, chipsize, directsave=True, first=True, best=False):
+def make_routability_plots(netlengths, routabilitydict, chipsize, directsave=True, first=True, best=False):
     first_col = 'blue'
-    destinationpath = os.path.join(os.path.curdir, "solvabilityplots")
+    destinationpath = os.path.join(os.path.curdir, "routabilityplots")
     destinationpath = os.path.join(destinationpath, str(chipsize))
 
-    solvability_scores_first = []
-    solvability_scores_best = []
+    routability_scores_first = []
+    routability_scores_best = []
     ks = []
-    for k in solvabilitydict:
-        ysf = solvabilitydict[k]['f']
-        ysb = solvabilitydict[k]['bc']
+    for k in routabilitydict:
+        ysf = routabilitydict[k]['f']
+        ysb = routabilitydict[k]['bc']
         ks.append(k)
-        solvability_scores_first.append(mean(ysf))
-        solvability_scores_best.append(mean(ysb))
+        routability_scores_first.append(mean(ysf))
+        routability_scores_best.append(mean(ysb))
     if first:
-        plt.plot(ks, solvability_scores_first, label="solvability unoptimized" + str(chipsize) + "x" + str(chipsize))
+        plt.plot(ks, routability_scores_first, label="routability unoptimized" + str(chipsize) + "x" + str(chipsize))
     if best:
-        plt.plot(ks, solvability_scores_best, label="solvability based on best of" + str(chipsize) + "x" + str(chipsize))
+        plt.plot(ks, routability_scores_best, label="routability based on best of" + str(chipsize) + "x" + str(chipsize))
     if directsave:
-        add_solvability_labels()
-        new_fname = os.path.join(destinationpath, "first_solvability" + str(chipsize) + "x" + str(chipsize) + ".png")
+        add_routability_labels()
+        new_fname = os.path.join(destinationpath, "first_routability" + str(chipsize) + "x" + str(chipsize) + ".png")
         if not os.path.exists(os.path.dirname(new_fname)):
             os.makedirs(os.path.dirname(new_fname))
         print(new_fname)
@@ -525,7 +525,7 @@ def make_solvability_plots(netlengths, solvabilitydict, chipsize, directsave=Tru
         plt.clf()
 
 
-def add_solvability_labels():
+def add_routability_labels():
     plt.xlabel("nets in tried netlist")
     plt.ylabel("% netlists fully placed")
     plt.legend()
@@ -538,78 +538,78 @@ def gather_data_chipsize(chipsize, netlengths, iters):
     # lprint([netlendict[k]["filenames"] for k in netlendict])
     # input()
     netlen_countdict = make_netlen_scatterpoints_placepercent(files, netlengths, netlendict, chipsize)
-    netlen_solvability_dict = make_netlen_solvabilitydict(files, netlengths, netlendict, chipsize, iters)
-    return files, netlendict, netlen_countdict, netlen_solvability_dict
+    netlen_routability_dict = make_netlen_routabilitydict(files, netlengths, netlendict, chipsize, iters)
+    return files, netlendict, netlen_countdict, netlen_routability_dict
 
 
-def save_solvability_all():
-    add_solvability_labels()
-    destinationpath = os.path.join(os.path.curdir, "solvabilityplots")
+def save_routability_all():
+    add_routability_labels()
+    destinationpath = os.path.join(os.path.curdir, "routabilityplots")
     destinationpath = os.path.join(destinationpath, "everything")
 
-    new_fname = os.path.join(destinationpath, "first_solvability.png")
+    new_fname = os.path.join(destinationpath, "first_routability.png")
     if not os.path.exists(os.path.dirname(new_fname)):
         os.makedirs(os.path.dirname(new_fname))
     plt.savefig(new_fname)
     plt.clf()
 
 
-def make_solvability_comparison(sizes, iters):
+def make_routability_comparison(sizes, iters):
     figure(num=None, figsize=(5, 5), dpi=160, facecolor='w', edgecolor='k')
 
     netlendicts_persize = []
     netlen_countdicts_persize = []
-    netlen_solvabilitydicts_persize = []
+    netlen_routabilitydicts_persize = []
     netlengths = [i+10 for i in range(81)]
 
     for chipsize in sizes:
-        files, netlendict, netlen_countdict, netlen_solvabilitydict = gather_data_chipsize(chipsize, netlengths, iters)
+        files, netlendict, netlen_countdict, netlen_routabilitydict = gather_data_chipsize(chipsize, netlengths, iters)
         netlendicts_persize.append(netlendict)
         netlen_countdicts_persize.append(netlen_countdict)
-        netlen_solvabilitydicts_persize.append(netlen_solvabilitydict)
+        netlen_routabilitydicts_persize.append(netlen_routabilitydict)
     for i, chipsize in enumerate(sizes):
-        make_solvability_plots(netlengths, netlen_solvabilitydicts_persize[i], chipsize, directsave=False)
-    save_solvability_all()
+        make_routability_plots(netlengths, netlen_routabilitydicts_persize[i], chipsize, directsave=False)
+    save_routability_all()
     for i, chipsize in enumerate(sizes):
-        make_solvability_plots(netlengths, netlen_solvabilitydicts_persize[i], chipsize)
+        make_routability_plots(netlengths, netlen_routabilitydicts_persize[i], chipsize)
 
 
-def solvability_header_gen(chipsizes, best_of_N):
+def routability_header_gen(chipsizes, best_of_N):
     for cs in chipsizes:
-        random_solvability = ["solvability by arb {}x{}".format(str(cs), str(cs))]
-        mean_solvability = ["solvability of mean {}x{}".format(str(cs), str(cs))]
-        best_solvability = ["solvability best of {}x{}".format(str(cs), str(cs))]
-        worst_solvability = ["solvability worst of {}x{}".format(str(cs), str(cs))]
-        yield random_solvability
-        yield mean_solvability
-        yield best_solvability
-        yield worst_solvability
+        random_routability = ["routability by arb {}x{}".format(str(cs), str(cs))]
+        mean_routability = ["routability of mean {}x{}".format(str(cs), str(cs))]
+        best_routability = ["routability best of {}x{}".format(str(cs), str(cs))]
+        worst_routability = ["routability worst of {}x{}".format(str(cs), str(cs))]
+        yield random_routability
+        yield mean_routability
+        yield best_routability
+        yield worst_routability
 
 
-def make_solvability_csvs(chipsizes, best_of_N):
+def make_routability_csvs(chipsizes, best_of_N):
     netlendicts_persize = []
     netlen_countdicts_persize = []
-    netlen_solvabilitydicts_persize = []
+    netlen_routabilitydicts_persize = []
     netlengths = [i+10 for i in range(81)]
-    csv_data_walk = [["netlist length"]] + [elem for elem in solvability_header_gen(chipsizes, best_of_N)]
+    csv_data_walk = [["netlist length"]] + [elem for elem in routability_header_gen(chipsizes, best_of_N)]
     print(csv_data_walk)
     dw_len = len(csv_data_walk)
     csv_data_walk[0].extend([str(nl) for nl in netlengths])
     for i, chipsize in enumerate(chipsizes):
-        print("getting solvability for chipsize", chipsize)
+        print("getting routability for chipsize", chipsize)
         j = i*4
-        files, netlendict, netlen_countdict, netlen_solvabilitydict = gather_data_chipsize(chipsize, netlengths, best_of_N)
+        files, netlendict, netlen_countdict, netlen_routabilitydict = gather_data_chipsize(chipsize, netlengths, best_of_N)
         # print("arbitrary")
-        # lprint([str(mean(netlen_solvabilitydict[n]['f'])) for n in netlengths][:5])
+        # lprint([str(mean(netlen_routabilitydict[n]['f'])) for n in netlengths][:5])
         # print("mean")
-        # lprint([str(mean(netlen_solvabilitydict[n]['mc'])) for n in netlengths][:5])
+        # lprint([str(mean(netlen_routabilitydict[n]['mc'])) for n in netlengths][:5])
         # print("bests")
-        # lprint([str(mean(netlen_solvabilitydict[n]['bc'])) for n in netlengths][:5])
+        # lprint([str(mean(netlen_routabilitydict[n]['bc'])) for n in netlengths][:5])
         # input()
-        csv_data_walk[j+1].extend([str(mean(netlen_solvabilitydict[n]['f'])) for n in netlengths])
-        csv_data_walk[j+2].extend([str(mean(netlen_solvabilitydict[n]['mc'])) for n in netlengths])
-        csv_data_walk[j+3].extend([str(mean(netlen_solvabilitydict[n]['bc'])) for n in netlengths])
-        csv_data_walk[j+4].extend([str(mean(netlen_solvabilitydict[n]['minc'])) for n in netlengths])
+        csv_data_walk[j+1].extend([str(mean(netlen_routabilitydict[n]['f'])) for n in netlengths])
+        csv_data_walk[j+2].extend([str(mean(netlen_routabilitydict[n]['mc'])) for n in netlengths])
+        csv_data_walk[j+3].extend([str(mean(netlen_routabilitydict[n]['bc'])) for n in netlengths])
+        csv_data_walk[j+4].extend([str(mean(netlen_routabilitydict[n]['minc'])) for n in netlengths])
     with open("compare_routability_best_of_"+str(best_of_N)+".csv", "w+") as inf:
         for i, netlength in enumerate(csv_data_walk[0]):
             line = ",".join([csv_data_walk[j][i] for j in range(dw_len)]) + "\n"
@@ -618,6 +618,6 @@ def make_solvability_csvs(chipsizes, best_of_N):
 
 
 chipsizes = [20, 30, 40, 50, 60, 70, 80, 90, 100]
-make_solvability_comparison(chipsizes, 200)
-# make_solvability_csvs(chipsizes, 1)
-make_solvability_csvs(chipsizes, 200)
+make_routability_comparison(chipsizes, 200)
+# make_routability_csvs(chipsizes, 1)
+make_routability_csvs(chipsizes, 200)

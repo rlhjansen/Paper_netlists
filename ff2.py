@@ -415,7 +415,7 @@ def fit_ab(meshsizes, param_func, _arb=False, _mean=False, _best=False, _worst=F
     p = plt.subplot(111)
     if _arb:
         plt.scatter(meshsize_col, arbitrary_beta, c=arb_col, label='real arbitrary sequence')
-        bapopt, pcov = curve_fit(logfunc, meshsize_col, arbitrary_beta, p0=(13, 0.005, 10), bounds=([-40, -0.5, -40000], [300, 0.5, 10000]))
+        bapopt, pcov = curve_fit(logfunc, meshsize_col, arbitrary_beta, p0=(13, 0.005, 10), bounds=([-40, -0.5, -400], [300, 0.5, 10000]))
         print("beta arbitrary", bapopt)
         p.plot(interp_chip, logfunc(interp_chip, *bapopt), c=fit_col, label="predicted beta arbitrary", linestyle="--")
 
@@ -450,7 +450,7 @@ def plotscatter(nl, routability, c, label=None, alpha=0.4, s=30):
 
 def ABNLfit(nl, routability, c, fitfunc, label=None, plot=False):
     popt, pcov = curve_fit(fitfunc, nl, routability, p0=(40, 0.05), bounds=([-100, -2], [200, 1]))
-    # popt, pcov = curve_fit(fitfunc, nl, routability, p0=(0.05, 0.05), bounds=([-1e6, 1e-5], [1e6, 1]))
+    popt, pcov = curve_fit(fitfunc, nl, routability, p0=(0.05, 0.05), bounds=([-1e6, 1e-2], [1e6, 1]))
     return popt, pcov
 
 def ABNL_plot(nl, popts, fitfunc, c, label=None, perc=True):
@@ -569,10 +569,10 @@ def log_likelyhood_model(param_func, modeltype, mesh_size):
 
 
 if __name__ == '__main__':
-    # param_func = "regular_logistic"
-    # save_ab([(i+2)*10 for i in range(9)], param_func)
-    # param_func = "expfunc"
-    # save_ab([(i+2)*10 for i in range(9)], param_func)
+    param_func = "regular_logistic"
+    save_ab([(i+2)*10 for i in range(9)], param_func)
+    param_func = "expfunc"
+    save_ab([(i+2)*10 for i in range(9)], param_func)
     _arb = True
     _mean = False
     _best = True
@@ -589,5 +589,5 @@ if __name__ == '__main__':
         compare_expected_best(param_func)
         plot_alpha_beta(meshsizes, ["arb"], param_func, "")
         plot_alpha_beta(meshsizes, ["arb", "best"], param_func, "", scatter=False)
-        for cs in meshsizes:
-            plot_residuals(["mean", "best"], cs, param_func, end=True, savename="k.png")
+        # for cs in meshsizes:
+        #     plot_residuals(["mean", "best"], cs, param_func, end=True, savename="k.png")
