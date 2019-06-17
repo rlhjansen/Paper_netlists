@@ -40,7 +40,7 @@ def maketable():
 
     start = """
 \\begin{center}
-\\begin{tabular}{ |""" + " | ".join(["c" for _ in range(cols.shape[0])]) + " |}\n\t" + \
+\\begin{tabular}{ |""" + " | ".join(["c" for _ in range(cols.shape[0])]) + " |}" + \
 """\\hline
 \\multicolumn{"""+str(cols.shape[0])+"""}{|c|}{parameters for differntly sized chips} \\\\
 \\hline

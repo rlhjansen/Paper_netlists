@@ -18,3 +18,4 @@ testingmodule.py
 rename_plots.py
 reformat_datafiles.py
 code/classes/solutiondict.py
+params_to_latex.py

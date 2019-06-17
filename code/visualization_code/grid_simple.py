@@ -36,7 +36,7 @@ def gate(draw, offset, gatesize, loc, g_num, font, g_col=(255,255,0,255)):
                     loc[1]*offset + gatesize + dif]
     border(draw, gate_outline)
     draw.rectangle(gate_outline, fill=(255,255,255,255))
-    draw.text((loc[0]*offset+3/12*offset, loc[1]*offset+1/3*offset), "G"+str(g_num), (0, 0, 0, 255), font=font)
+    draw.text((loc[0]*offset+3/12*offset, loc[1]*offset+1/3*offset), " T"+str(g_num), (0, 0, 0, 255), font=font)
 
 
 def gates(draw, offset, gatesize, locs, gate_nums, font, g_col=(255,255,0,255)):
@@ -45,16 +45,16 @@ def gates(draw, offset, gatesize, locs, gate_nums, font, g_col=(255,255,0,255)):
 
 
 
-def net_segment(draw, offset, seg_start, seg_end, width=1, n_col=(50,200,50,255)):
+def net_segment(draw, offset, seg_start, seg_end, n_col, width):
     half_offset = int(offset/2)
     new_start = (seg_start[0]*offset + half_offset, seg_start[1]*offset + half_offset)
     new_end = (seg_end[0]*offset + half_offset, seg_end[1]*offset + half_offset)
     draw.line([new_start, new_end], width=width, fill=n_col)
 
 
-def net(draw, offset, netlocs, width=1, n_col=(50,200,100,255)):
+def net(draw, offset, netlocs, width=1, n_col=(0,0,255,255)):
     for index in range(len(netlocs)-1):
-        net_segment(draw, offset, netlocs[index], netlocs[index+1], width=width, n_col=n_col)
+        net_segment(draw, offset, netlocs[index], netlocs[index+1], n_col, width)
 
 
 def netlist(draw, offset, _netlist, cols, width=1, n_col=(50,200,100,255)):
@@ -104,7 +104,7 @@ GATE_LOCS_SHORT = [(3,0), (3,4), (6,0), (6,4)]
 GATE_LOCS_TOT = GATE_LOCS_LONG + GATE_LOCS_SHORT
 GATE_NUMS = [i for i in range(len(GATE_LOCS_TOT))]
 
-NET_COLORS = [(143, 61, 94, 255), (127,133,73,255), (66,79,52,255)]
+NET_COLORS = [(0,0,255,255) for _ in range(3)]
 
 
 
@@ -176,7 +176,7 @@ NETLIST_FALSE = [NETLIST_LONG, NETLIST_SHORT_1, NETLIST_SHORT_2]
 
 create_circuit(OFFSET, GATESIZE, GATE_LOCS_TOT, GATE_NUMS, GATE_FONT, NETLIST_EMPTY, NET_COLORS, 'empty.png')
 
-"""
+#"""
 create_circuit(OFFSET, GATESIZE, GATE_LOCS_TOT, GATE_NUMS, GATE_FONT, NETLIST_1, NET_COLORS, 'solution.png')
 
 create_circuit(OFFSET, GATESIZE, GATE_LOCS_TOT, GATE_NUMS, GATE_FONT, NETLIST_1_1, NET_COLORS, 'sol_step1.png')
@@ -189,4 +189,4 @@ create_circuit(OFFSET, GATESIZE, GATE_LOCS_TOT, GATE_NUMS, GATE_FONT, NETLIST_3,
 create_circuit(OFFSET, GATESIZE, GATE_LOCS_TOT, GATE_NUMS, GATE_FONT, NETLIST_4, NET_COLORS, 'false_1a.png')
 
 create_circuit(OFFSET, GATESIZE, GATE_LOCS_TOT, GATE_NUMS, GATE_FONT, NETLIST_FALSE, NET_COLORS, 'False.png')
-"""
+#"""
