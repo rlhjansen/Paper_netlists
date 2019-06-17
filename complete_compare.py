@@ -64,7 +64,7 @@ def get_max_placed_count(f):
     readfile.close()
     return best_count
 
-def get_mean_placed_count(f, k):
+def get_mean_routed_count(f, k):
     """ Gets the scatterpoints from a file
     """
     readfile = open(f, 'r')
@@ -72,6 +72,17 @@ def get_mean_placed_count(f, k):
     for line in readfile.readlines():
         data = line.split(";")
         place_counts.append(1 if int(data[1]) == k else 0)
+    readfile.close()
+    return mean(place_counts)
+
+def get_mean_placed_count(f):
+    """ Gets the scatterpoints from a file
+    """
+    readfile = open(f, 'r')
+    place_counts = []
+    for line in readfile.readlines():
+        data = line.split(";")
+        place_counts.append(int(data[1]))
     readfile.close()
     return mean(place_counts)
 
@@ -86,7 +97,7 @@ def make_netlen_scatterpoints_placepercent(files, netlengths, netlendict, square
             if strk in f[36:]:
                 firstcount = get_first_placed_count(f)
                 best_count = get_max_placed_count(f)
-                mean_count = get_mean_placed_count(f, k)
+                mean_count = get_mean_placed_count(f)
                 min_count = get_min_placed_count(f)
                 netlen_countdict[k]['f'].append(firstcount/k)
                 netlen_countdict[k]['bc'].append(best_count/k)
@@ -488,7 +499,7 @@ def make_netlen_routabilitydict(files, netlengths, netlendict, chipsize, iters):
             if strk in fcheck:
                 firstcount = get_first_placed_count(f)
                 best_count = get_max_placed_count(f)
-                mean_count = get_mean_placed_count(f, k)
+                mean_count = get_mean_routed_count(f, k)
                 min_count = get_min_placed_count(f)
                 netlen_routabilitydict[k]['f'].append(1 if firstcount == k else 0)
                 netlen_routabilitydict[k]['mc'].append(mean_count)
@@ -589,23 +600,14 @@ def routability_header_gen(chipsizes, best_of_N):
 def make_routability_csvs(chipsizes, best_of_N):
     netlendicts_persize = []
     netlen_countdicts_persize = []
-    netlen_routabilitydicts_persize = []
     netlengths = [i+10 for i in range(81)]
     csv_data_walk = [["netlist length"]] + [elem for elem in routability_header_gen(chipsizes, best_of_N)]
-    print(csv_data_walk)
     dw_len = len(csv_data_walk)
     csv_data_walk[0].extend([str(nl) for nl in netlengths])
     for i, chipsize in enumerate(chipsizes):
         print("getting routability for chipsize", chipsize)
         j = i*4
         files, netlendict, netlen_countdict, netlen_routabilitydict = gather_data_chipsize(chipsize, netlengths, best_of_N)
-        # print("arbitrary")
-        # lprint([str(mean(netlen_routabilitydict[n]['f'])) for n in netlengths][:5])
-        # print("mean")
-        # lprint([str(mean(netlen_routabilitydict[n]['mc'])) for n in netlengths][:5])
-        # print("bests")
-        # lprint([str(mean(netlen_routabilitydict[n]['bc'])) for n in netlengths][:5])
-        # input()
         csv_data_walk[j+1].extend([str(mean(netlen_routabilitydict[n]['f'])) for n in netlengths])
         csv_data_walk[j+2].extend([str(mean(netlen_routabilitydict[n]['mc'])) for n in netlengths])
         csv_data_walk[j+3].extend([str(mean(netlen_routabilitydict[n]['bc'])) for n in netlengths])
@@ -617,7 +619,29 @@ def make_routability_csvs(chipsizes, best_of_N):
 
 
 
+def make_improvement_csvs(chipsizes, best_of_N):
+    netlendicts_persize = []
+    netlen_countdicts_persize = []
+    netlengths = [i+10 for i in range(81)]
+    csv_data_walk = [["netlist length"]] + [elem for elem in routability_header_gen(chipsizes, best_of_N)]
+    dw_len = len(csv_data_walk)
+    csv_data_walk[0].extend([str(nl) for nl in netlengths])
+    for i, chipsize in enumerate(chipsizes):
+        print("getting routability for chipsize", chipsize)
+        j = i*4
+        files, netlendict, netlen_countdict, netlen_routabilitydict = gather_data_chipsize(chipsize, netlengths, best_of_N)
+        csv_data_walk[j+1].extend([str(mean(netlen_countdict[n]['f'])) for n in netlengths])
+        csv_data_walk[j+2].extend([str(mean(netlen_countdict[n]['mc'])) for n in netlengths])
+        csv_data_walk[j+3].extend([str(mean(netlen_countdict[n]['bc'])) for n in netlengths])
+        csv_data_walk[j+4].extend([str(mean(netlen_countdict[n]['minc'])) for n in netlengths])
+    with open("compare_improvement_best_of_"+str(best_of_N)+".csv", "w+") as inf:
+        for i, netlength in enumerate(csv_data_walk[0]):
+            line = ",".join([csv_data_walk[j][i] for j in range(dw_len)]) + "\n"
+            inf.write(line)
+
+
 chipsizes = [20, 30, 40, 50, 60, 70, 80, 90, 100]
-make_routability_comparison(chipsizes, 200)
+# make_routability_comparison(chipsizes, 200)
 # make_routability_csvs(chipsizes, 1)
-make_routability_csvs(chipsizes, 200)
+# make_routability_csvs(chipsizes, 200)
+make_improvement_csvs(chipsizes, 200)
