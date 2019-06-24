@@ -36,7 +36,6 @@ runs are given tags to avoid overwriting files through git when collecting data 
 # authors:
 
 Reitze Jansen
-Yannick Vinkesteijn
 
 # supervisor:
 
