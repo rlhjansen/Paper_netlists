@@ -176,23 +176,22 @@ def simple_generator(c, cX, n, puzzels, x, y, tag="TESTRUN", iters=None):
 def meh(alg_obj):
     alg_obj.run_algorithm()
 
-def gatherSimple(size, iters=1, start_add=71, end_iter=20):
+def gatherSimple(size, iters=1, start_add=10, end_iter=91, tag="TESTRUN"):
     print("gathering for chip of size:", size, "x", size)
     print("gatherin for netlists of length", start_add, "up to", end_iter-1+start_add)
     print("getting", iters, "orders per netlist")
 
-    lens = [i+start_add for i in range(end_iter)]
+    lens = [i+start_add for i in range(end_iter-start_add)]
     for n in lens:
         pool = mp.Pool(mp.cpu_count()-1)
-        Simples = simple_generator(100, 0, n, 20, size, size, tag="TESTRUN", iters=iters)
+        Simples = simple_generator(100, 0, n, 20, size, size, tag=tag, iters=iters)
         pool.map(meh, Simples)
         pool.close()
-
 
 
 if __name__ == '__main__':
     #parse_args(sys.argv)
     starttime = datetime.datetime.now()
     for chipsize in [20, 30, 40, 50, 60, 70, 80, 90, 100]:
-        gatherSimple(chipsize, iters=200)
+        gatherSimple(chipsize, iters=20, tag='test-okt')
         print("time elapsed:\t", datetime.datetime.now() - starttime)

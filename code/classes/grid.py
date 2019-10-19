@@ -319,6 +319,8 @@ class Grid:
         manh_d = manhattan(path[-1], end_loc)
         q.put((manh_d, 0, start_loc))
         visited = dict()
+
+        # records nodes in the graph (tuples), and costs on those locations (int)
         visited[start_loc] = [start_loc, 0]
         while not q.empty():
             count += 1
@@ -328,6 +330,7 @@ class Grid:
                 n_coord = neighbour.get_coord()
 
                 if neighbour.is_occupied():
+                    # end condition
                     if n_coord == end_loc:
                         visited[n_coord] = [current, steps]
                         return self.extract_route(visited, n_coord), \
@@ -336,6 +339,8 @@ class Grid:
                         continue
                 if n_coord in visited:
                     if visited.get(n_coord)[1] > steps:
+                        # checks if current number of steps is lower than
+                        # established cost of the node
                         visited[n_coord] = [current, steps]
                         q.put((manhattan(n_coord, end_loc) + steps + 1, steps + 1,
                           n_coord))
@@ -348,6 +353,9 @@ class Grid:
 
     def A_star_max_g(self, net):
         """ finds a path for a net with A-star algorithm, quits searching early if the end-gate is closed off by its immediate neighbourse.
+
+        in case of ties in nodes to expand by (heuristic+cost to node)
+        the node with most steps taken yet is chosen
 
         :param net: gate-pair (gX, gY)
         :return: path, length if path founde, else false, false
@@ -367,7 +375,6 @@ class Grid:
         q.put((manh_d, 0, start_loc))
         visited = dict()
         visited[start_loc] = [start_loc, 0]
-        # print("start_loc", start_loc)
         while not q.empty():
             count += 1
             k = q.get()
@@ -377,16 +384,20 @@ class Grid:
 
                 if neighbour.is_occupied():
                     if n_coord == end_loc:
+                        # end condition, path found
+
                         visited[n_coord] = [current, steps]
-                        # print("end_loc", end_loc)
                         return self.extract_route(visited, n_coord), \
                                visited.get(end_loc)[1], count
                     else:
                         continue
                 if n_coord in visited:
                     if visited.get(n_coord)[1] > steps:
+                        # checks if current number of steps is lower than
+                        # established cost of the node
+
                         visited[n_coord] = [current, steps]
-                        q.put((manhattan(n_coord, end_loc) - steps + 1, steps - 1,
+                        q.put((manhattan(n_coord, end_loc) + steps + 1, steps + 1,
                           n_coord))
                 else:
                     visited[n_coord] = [current, steps]
