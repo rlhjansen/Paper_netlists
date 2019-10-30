@@ -193,5 +193,5 @@ if __name__ == '__main__':
     #parse_args(sys.argv)
     starttime = datetime.datetime.now()
     for chipsize in [20, 30, 40, 50, 60, 70, 80, 90, 100]:
-        gatherSimple(chipsize, iters=20, tag='test-okt')
+        gatherSimple(chipsize, iters=200, tag='test-okt')
         print("time elapsed:\t", datetime.datetime.now() - starttime)

@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 
 class SIMPLY(Optimizer):
-    def __init__(self, c, cX, n, nX, x, y, tag, iters=200, chance_on_same=.5, **kwargs):
+    def __init__(self, c, cX, n, nX, x, y, tag, iters=200, max_g=True, chance_on_same=.5, **kwargs):
         """Initializes instance to collect sample solutions
 
         :param grid_num: Assigned number of circuit
@@ -22,7 +22,7 @@ class SIMPLY(Optimizer):
         """
         Optimizer.__init__(self, c, cX, n, nX, x, y, iters, tag, **kwargs)
         self.set_saveloc('simple')
-        self.circuit = file_to_grid(self.circuit_path, None, max_g=True)
+        self.circuit = file_to_grid(self.circuit_path, None, max_g=max_g)
         self.circuit.read_nets(self.netlist_path)
         self.circuit.disconnect()
 

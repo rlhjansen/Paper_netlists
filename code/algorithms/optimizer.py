@@ -49,6 +49,7 @@ class Optimizer:
             #print(self.all_results)
 
     def add_iter_batch(self, batch_results):
+        """TODO write batch results format"""
         iter = str(self.iter)
         self.all_data.extend([[iter] + br for br in batch_results])
 

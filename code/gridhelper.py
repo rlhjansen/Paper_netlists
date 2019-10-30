@@ -108,3 +108,7 @@ def transform_print(val):
         return val[1:].zfill(3)
     else:
         raise ValueError("incorrect node value")
+
+
+if __name__ == '__main__':
+    print(len(params_inp([1,1,7])))

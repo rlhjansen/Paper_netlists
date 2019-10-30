@@ -2,7 +2,7 @@ from refscatter import reorder_by_netlength
 from statistics import mean
 from collections import OrderedDict, Counter
 
-from testingmodule import lprint
+from personal_util import lprint
 
 
 import matplotlib.pyplot as plt
@@ -641,7 +641,8 @@ def make_improvement_csvs(chipsizes, best_of_N):
 
 
 chipsizes = [20, 30, 40, 50, 60, 70, 80, 90, 100]
-# make_routability_comparison(chipsizes, 200)
-# make_routability_csvs(chipsizes, 1)
-# make_routability_csvs(chipsizes, 200)
-make_improvement_csvs(chipsizes, 200)
+
+N = 10
+make_routability_comparison(chipsizes, N)
+make_routability_csvs(chipsizes, N)
+make_improvement_csvs(chipsizes, N)

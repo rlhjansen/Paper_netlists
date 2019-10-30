@@ -397,6 +397,7 @@ class Grid:
                         # established cost of the node
 
                         visited[n_coord] = [current, steps]
+                        # was - 1 before, not sure why atm
                         q.put((manhattan(n_coord, end_loc) + steps + 1, steps + 1,
                           n_coord))
                 else:
@@ -405,6 +406,22 @@ class Grid:
                            n_coord))
         return False, False, count
 
+    def visualize_costs(self, visit_dict):
+        """ TODO: template for visualizing costs, taken from standard str
+
+        TODO: built function such that the current expansion dict can be visualised after every iterations
+        TODO: make this stepwise with input() such that costs can be checked.
+        """
+        complete = []
+        pars = self.params
+        for z in range(pars[2]):
+            complete.append("### Layer" + str(z + 1) + "###")
+            for y in range(pars[1]):
+                vals = [self.griddict[(x,y,z)].get_value() for x in range(pars[0])]
+                transformed_vals = [transform_print(val) for val in vals]
+                complete.append(" ".join(transformed_vals))
+        print("\n".join(complete))
+        input()
 
 
     def solve_order(self, net_order, reset=False):

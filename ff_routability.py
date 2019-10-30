@@ -83,9 +83,9 @@ def determine_3x3_x(elem_n):
     return elem_n // 6
 
 
-def save_ab(chipsizes, param_func):
+def save_ab(chipsizes, param_func, N):
     fitfunc = eval(param_func)
-    datafile = "compare_routability_best_of_200.csv"
+    datafile = "compare_routability_best_of_"+str(N)+".csv"
     df = pd.read_csv(datafile, index_col="netlist length")
     nl = np.array(df.index.values.tolist())
 
@@ -126,7 +126,7 @@ def plot_shift_slope(chipsizes, types, param_func, title, scatter=True, fitted=T
     fitfunc = eval(param_func)
     plot_savefile = gen_filename_window(param_func, types, scatter, fitted)
 
-    datafile = "compare_routability_best_of_200.csv"
+    datafile = "compare_routability_best_of_"+str(N)+".csv"
     df = pd.read_csv(datafile, index_col="netlist length")
     nl = np.array(df.index.values.tolist())
     ab_df = load_ab(param_func)
@@ -206,12 +206,12 @@ def plot_shift_slope(chipsizes, types, param_func, title, scatter=True, fitted=T
     #plt.show()
 
 
-def plot_fits(types_of_fit, suptitle, param_func, cs="all", scatter=False):
+def plot_fits(types_of_fit, suptitle, param_func, N, cs="all", scatter=False):
     plt.clf()
     fitfunc = eval(param_func)
     bbox_tuple = (1.05, -0.3, 1.0, 1.0)
     ab_df = load_ab(param_func)
-    datafile = "compare_routability_best_of_200.csv"
+    datafile = "compare_routability_best_of_"+str(N)+".csv"
     df = pd.read_csv(datafile, index_col="netlist length")
     nl = np.array(df.index.values.tolist())
 
@@ -242,10 +242,10 @@ def plot_fits(types_of_fit, suptitle, param_func, cs="all", scatter=False):
 
     # plt.suptitle("expected routability for differently sized meshs\n\n")
     p = plt.subplot(type_count+2,1,3)
-    fitted_vals = [1 - (1 - fitfunc(nl, ab_df['mean'+'_a'][size], ab_df['mean'+'_b'][size]))**200 for size in sizes]
+    fitted_vals = [1 - (1 - fitfunc(nl, ab_df['mean'+'_a'][size], ab_df['mean'+'_b'][size]))**N for size in sizes]
 
     for j, fitted_m in enumerate(fitted_vals):
-        p.plot(nl, fitted_m, label="expected best based on average fit over 200")
+        p.plot(nl, fitted_m, label="expected best based on average fit over "+str(N))
         if scatter:
             y = df[eval(t+"_solv_str")((2+sizes[j])*10)]
             p.scatter(nl, y, c=initial_col, label=t, alpha=0.4)
@@ -279,11 +279,11 @@ def plot_fits(types_of_fit, suptitle, param_func, cs="all", scatter=False):
 
 
 
-def compare_expected_best(param_func):
+def compare_expected_best(param_func, N):
     fitfunc = eval(param_func)
     ["best", "mean"]
     ab_df = load_ab(param_func)
-    datafile = "compare_routability_best_of_200.csv"
+    datafile = "compare_routability_best_of_" + str(N) + ".csv"
     df = pd.read_csv(datafile, index_col="netlist length")
     nl = np.array(df.index.values.tolist())
 
@@ -291,7 +291,7 @@ def compare_expected_best(param_func):
     plt.figure(figsize=(7,7))
     fitted_vals = [fitfunc(nl, ab_df["mean"+'_a'][size], ab_df["mean"+'_b'][size]) for size in sizes]
     fitted_bests = [fitfunc(nl, ab_df["best"+'_a'][size], ab_df["best"+'_b'][size]) for size in sizes]
-    expected_bests = [[1.0 - (1.0-val)**200 for val in fv] for fv in fitted_vals]
+    expected_bests = [[1.0 - (1.0-val)**N for val in fv] for fv in fitted_vals]
     p = plt.subplot(3,1,1)
     plt.setp(p.get_xticklabels(), visible=True)
     for fitted_m in fitted_vals:
@@ -317,10 +317,10 @@ def compare_expected_best(param_func):
     #plt.show()
 
 
-def plot_fits_dif(t1, t2, param_func, suptitle):
+def plot_fits_dif(t1, t2, param_func, suptitle, N):
     fitfunc = eval(param_func)
     ab_df = load_ab(param_func)
-    datafile = "compare_routability_best_of_200.csv"
+    datafile = "compare_routability_best_of_"+str(N)+".csv"
     df = pd.read_csv(datafile, index_col="netlist length")
     nl = df.index.values.tolist()
 
@@ -346,7 +346,7 @@ def plot_fits_dif(t1, t2, param_func, suptitle):
     #plt.show()
 
 
-def scatter_routability(types_of_scatter, cs, end=False, title=None, savename=None, print_options=True):
+def scatter_routability(types_of_scatter, cs, N, end=False, title=None, savename=None, print_options=True):
     if end and not savename:
         raise ValueError(cannot)
     _, df, _, nl = get_plot_necessities(param_func)
@@ -362,7 +362,7 @@ def scatter_routability(types_of_scatter, cs, end=False, title=None, savename=No
         p.legend()
 
     p = plt.subplot(type_count,1, 3)
-    y_arb = 1 - (1 - df[eval("mean_solv_str(cs)")])**200
+    y_arb = 1 - (1 - df[eval("mean_solv_str(cs)")])**N
     p.scatter(nl, y_arb, c=initial_col, label="average based expected best", alpha=0.4)
     p.set_title("expected best based on average")
     p.set_ylabel("routable ratio")
@@ -457,6 +457,7 @@ def fit_ab(mesh_metric, param_func, _arb=False, _mean=False, _best=False, _worst
     plt.xlabel("chipsize")
     plt.title("shift of routability function w.r.t chipsize " + mesh_metric)
     plt.legend()
+    print(param_func + "/shift_param_chipsize_" + mesh_metric + ".png")
     plt.savefig(param_func + "/shift_param_chipsize_" + mesh_metric + ".png")
     plt.show()
     plt.clf()
@@ -584,9 +585,9 @@ def plot_residuals(types_of_scatter, mesh_size, param_func, end=False, title=Non
     plt.savefig(param_func + "/" + param_func + " residual_comparison_"+str(cs)+".png")
 
 
-def get_plot_necessities(param_func):
+def get_plot_necessities(param_func, N):
     fitfunc = eval(param_func)
-    df = pd.read_csv("compare_routability_best_of_200.csv")
+    df = pd.read_csv("compare_routability_best_of_"+str(N)+".csv")
     ab_df = load_ab(param_func)
     nl = [10 + e for e in df.index.values.tolist()]
     return fitfunc, df, ab_df, nl
@@ -620,10 +621,11 @@ def log_likelyhood_model(param_func, modeltype, mesh_size):
 
 
 if __name__ == '__main__':
+    N = 10
     param_func = "regular_logistic"
-    save_ab([(i+2)*10 for i in range(9)], param_func)
+    save_ab([(i+2)*10 for i in range(9)], param_func, 10)
     param_func = "expfunc"
-    save_ab([(i+2)*10 for i in range(9)], param_func)
+    save_ab([(i+2)*10 for i in range(9)], param_func, 10)
     _arb = True
     _mean = False
     _best = True
@@ -642,7 +644,7 @@ if __name__ == '__main__':
         fit_ab("area", param_func, _arb=_arb, _mean=_mean, _best=_best, _worst=_worst)
         fit_ab("edge size", param_func, _arb=_arb, _mean=_mean, _best=_best, _worst=_worst)
         fit_ab("volume", param_func, _arb=_arb, _mean=_mean, _best=_best, _worst=_worst)
-        compare_expected_best(param_func)
+        compare_expected_best(param_func, N)
         # plot_shift_slope(chipsizes, ["initial"], param_func, "")
         # plot_shift_slope(chipsizes, ["initial"], param_func, "", fitted=False)
         # plot_shift_slope(chipsizes, ["initial"], param_func, "", scatter=False)

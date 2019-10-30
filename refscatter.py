@@ -1,7 +1,7 @@
 
 import matplotlib.pyplot as plt
 import os
-from testingmodule import lprint
+from personal_util import lprint
 
 path = os.path.curdir
 path = os.path.join(path, "results")
