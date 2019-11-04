@@ -642,7 +642,7 @@ def make_improvement_csvs(chipsizes, best_of_N):
 
 chipsizes = [20, 30, 40, 50, 60, 70, 80, 90, 100]
 
-N = 10
+N = 200
 make_routability_comparison(chipsizes, N)
 make_routability_csvs(chipsizes, N)
 make_improvement_csvs(chipsizes, N)

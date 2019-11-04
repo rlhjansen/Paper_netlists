@@ -275,7 +275,7 @@ def plot_fits(types_of_fit, suptitle, param_func, N, cs="all", scatter=False):
     p.set_xlabel("netlist length")
 
     plt.savefig("expected_chipsize_compare.png")
-    #plt.show()
+    plt.show()
 
 
 
@@ -419,7 +419,7 @@ def fit_ab(mesh_metric, param_func, _arb=False, _mean=False, _best=False, _worst
         mesh_metric_col = getdfcol(df,0)
     elif mesh_metric == "volume":
         mesh_metric_col = getdfcol(df,0)**2 * 8
-    interp_mesh = [i for i in range(min(mesh_metric_col), max(mesh_metric_col), 1)]
+    interp_mesh = np.array([i for i in range(min(mesh_metric_col), max(mesh_metric_col), 1)])
     initial_shift = getdfcol(df,1)
     best_shift = getdfcol(df,5)
     mean_shift = getdfcol(df,3)
@@ -536,7 +536,8 @@ def load_ab(param_func, _print=False):
 
 @written_math("-const1 * natural log( const2 * (value - const3))")
 def logfunc(value, const1, const2, const3):
-    return  -const1*np.log(const2* (value-const3))
+    # return  -const1*np.log(const2* (value-const3))
+    return  -const1 * np.log( const2 * (value - const3))
 
 
 
@@ -621,16 +622,16 @@ def log_likelyhood_model(param_func, modeltype, mesh_size):
 
 
 if __name__ == '__main__':
-    N = 10
+    N = 200
     param_func = "regular_logistic"
-    save_ab([(i+2)*10 for i in range(9)], param_func, 10)
-    param_func = "expfunc"
-    save_ab([(i+2)*10 for i in range(9)], param_func, 10)
+    save_ab([(i+2)*10 for i in range(9)], param_func, N)
+    # param_func = "expfunc"
+    # save_ab([(i+2)*10 for i in range(9)], param_func, 10)
     _arb = True
     _mean = False
     _best = True
     _worst = False
-    fitfunc_names = ["regular_logistic", "expfunc"]
+    fitfunc_names = ["regular_logistic"]
     cs = 80
     chipsizes = [(i+2)*10 for i in range(9)]
 
@@ -639,12 +640,12 @@ if __name__ == '__main__':
         # example_scatter(param_func, ["initial"], 60, legend=False)
         # example_scatter(param_func, ["best"], 60, legend=False)
         # scatter_routability(["initial", "best"], cs, end=True, savename="k.png")
-        # plot_fits(["initial", "best"],"" ,param_func, cs=cs, scatter=True)
+        # plot_fits(["initial", "best"],"" ,param_func, 200, cs=cs, scatter=True)
         # plot_fits_dif("best", "initial", param_func, "difference best and mean")
         fit_ab("area", param_func, _arb=_arb, _mean=_mean, _best=_best, _worst=_worst)
-        fit_ab("edge size", param_func, _arb=_arb, _mean=_mean, _best=_best, _worst=_worst)
-        fit_ab("volume", param_func, _arb=_arb, _mean=_mean, _best=_best, _worst=_worst)
-        compare_expected_best(param_func, N)
+        # fit_ab("edge size", param_func, _arb=_arb, _mean=_mean, _best=_best, _worst=_worst)
+        # fit_ab("volume", param_func, _arb=_arb, _mean=_mean, _best=_best, _worst=_worst)
+        # compare_expected_best(param_func, N)
         # plot_shift_slope(chipsizes, ["initial"], param_func, "")
         # plot_shift_slope(chipsizes, ["initial"], param_func, "", fitted=False)
         # plot_shift_slope(chipsizes, ["initial"], param_func, "", scatter=False)
